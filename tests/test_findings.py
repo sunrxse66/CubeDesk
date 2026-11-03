@@ -67,7 +67,7 @@ class FindingsTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.findings.pin(photo['id'])
         self.findings.files[photo['id']]=path
         with patch('cubedesk.findings.os.startfile',create=True) as opened:
-            self.findings.open_original(photo['id']);opened.assert_called_once_with(str(path),'open')
+            self.findings.open_original(photo['id']);opened.assert_called_once_with(str(path.resolve()),'open')
 
     def test_removed_source_is_handled_without_losing_cached_preview(self):
         path=self.photo('memory.png');self.findings.choose(str(self.photos));photo=self.findings.next()
