@@ -35,7 +35,7 @@ function renderState() {
   const measured = state.playback?.fps;
   $('#player-title').textContent = streamRunning && j.scope === 'pet' ? 'Питомец на кубике' : streamRunning && j.scope === 'widget' ? 'Виджет на кубике' : streamRunning && j.scope === 'file' ? 'Выбранный файл' : 'Воспроизведение всей папки';
   $('#player-description').textContent = j.running && j.kind === 'stream' ?
-    j.scope === 'pet' ? `Моти · ${state.pet?.label || 'Отдыхает'}` : j.scope === 'widget' ? `${j.message} · 240×240` : `${measured ? `${measured.toLocaleString('ru-RU')} кадров/с · ${state.playback.resolution}×${state.playback.resolution} · ` : 'Подготовка кадров · '}${j.message}` :
+    j.scope === 'pet' ? `${state.pet?.name || 'Моти'} · ${state.pet?.label || 'Отдыхает'}` : j.scope === 'widget' ? `${j.message} · 240×240` : `${measured ? `${measured.toLocaleString('ru-RU')} кадров/с · ${state.playback.resolution}×${state.playback.resolution} · ` : 'Подготовка кадров · '}${j.message}` :
     'Исходная скорость GIF · кадры готовятся заранее';
   $('#library-mode-note').textContent = d.kind === 'stock' ? 'Штатная прошивка: «Показать» загрузит один файл в память кубика. JPG готовится автоматически; GIF нужен размером 240×240. Для длинных анимаций требуется PCStream.' : d.kind === 'stream' ? '«Показать на кубике» запускает только выбранный файл: GIF повторяется, картинка остаётся на экране. Можно переключать файлы во время показа. «Всю папку» включает всю медиатеку по очереди. ПК должен оставаться включённым.' : 'Для показа на устройстве сначала подключите кубик. Просматривать и добавлять файлы можно уже сейчас.';
   $('#event-log').textContent = state.events.length ? state.events.map(e => `${e.time}  ${e.message}`).join('\n') : 'Пока нет событий.';

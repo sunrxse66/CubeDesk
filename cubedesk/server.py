@@ -24,7 +24,7 @@ from smooth_player import play
 from cubedesk.device import Device, validate_host
 from cubedesk.weather import WeatherService, validate_city
 from cubedesk.widgets import KINDS, render as render_widget, play_widget
-from cubedesk.pet import PetState, play_pet
+from cubedesk.pet import PetState, play_pet, validate_character
 from cubedesk import VERSION
 from cubedesk.updates import UpdateService, flash_firmware
 
@@ -42,7 +42,7 @@ class AppState:
         self.config_path = storage / "settings.json"
         self.lock = threading.RLock()
         self.control = threading.RLock()
-        self.config = {"host": "", "token": "", "folder": str(self.imports), "fps": 30, "seconds": 5, "detail": "smooth", "widget_city": None}
+        self.config = {"host": "", "token": "", "folder": str(self.imports), "fps": 30, "seconds": 5, "detail": "smooth", "widget_city": None, "pet_character":"moti"}
         source = self.config_path if self.config_path.exists() else migrate
         if source and source.is_file():
             try:
@@ -60,7 +60,9 @@ class AppState:
         except ValueError:
             self.config['widget_city'] = None
         self.weather = WeatherService(storage)
-        self.pet = PetState()
+        try:self.config['pet_character']=validate_character(self.config['pet_character'])
+        except ValueError:self.config['pet_character']='moti'
+        self.pet = PetState(character=self.config['pet_character'])
         self.updates = UpdateService(storage)
         self.device = {"kind": "unknown", "host": self.config["host"]}
         self.job = {"running": False, "kind": "", "message": "Готов к подключению", "error": False}
@@ -111,6 +113,7 @@ class AppState:
             if not isinstance(updated["token"], str) or len(updated["token"].encode()) > 128:
                 raise ValueError("API-токен должен содержать не более 128 байт")
             updated['widget_city'] = validate_city(updated['widget_city'])
+            updated['pet_character'] = validate_character(updated['pet_character'])
             return updated
 
     def settings(self, data):
@@ -122,6 +125,7 @@ class AppState:
                 self.device = {"kind": "unknown", "host": updated["host"]}
             self.config = updated
             self.save()
+            self.pet.select(updated['pet_character'])
         return self.public()
 
     def library(self):
@@ -292,6 +296,16 @@ class AppState:
             with self.lock:
                 self.device["free"] = None
         self.begin("upload", action)
+
+    def select_pet(self, character):
+        character=validate_character(character)
+        with self.control,self.lock:
+            if self.job['running'] and self.job['kind']!='stream':
+                raise ValueError('Дождитесь завершения текущей операции')
+            self.config['pet_character']=character
+            self.save()
+            self.pet.select(character)
+        return self.public()['pet']
 
     def show_pet(self, call=False):
         with self.control:
@@ -493,6 +507,8 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path in ('/api/pet/show','/api/pet/call'):
                 app.show_pet(call=url.path.endswith('/call'))
                 result = {'ok':True,'pet':app.public()['pet']}
+            elif url.path == '/api/pet/select':
+                result = {'ok':True,'pet':app.select_pet(data.get('character'))}
             elif url.path == '/api/updates/check':
                 app.updates.check()
                 result = app.updates.public()

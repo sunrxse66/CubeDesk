@@ -1,5 +1,5 @@
 'use strict';
-let weatherState = null, cityBusy = false, widgetsLoading = false, weatherLastCheck = 0;
+let weatherState = null, cityBusy = false, widgetsLoading = false, weatherLastCheck = 0, cityEditorInitialized=false;
 const widgetNames = {clock:'Часы',weather:'Погода',combined:'Часы и погода'};
 const widgetButtons = {clock:'Показать часы ↗',weather:'Показать погоду ↗',combined:'Показать общий экран ↗'};
 
@@ -28,6 +28,8 @@ function renderWeather() {
   if (!weatherState) return;
   const w=weatherState;
   $('#chosen-city').textContent=w.city ? [w.city.name,w.city.region,w.city.country].filter(Boolean).join(' · ') : 'Выберите город для погодных виджетов.';
+  $('#chosen-city').title=$('#chosen-city').textContent;
+  if(!cityEditorInitialized){$('#city-editor').open=!w.city;cityEditorInitialized=true;}
   let text='Часы уже готовы. Для погоды нужен город и интернет.';
   if (w.city) {
     if (w.forecast) {
@@ -82,6 +84,7 @@ $('#city-search-form').addEventListener('submit',async event => {
           try {
             weatherState=await api('/api/widgets/city',{id:city.id});
             $('#city-results').replaceChildren();$('#city-query').value='';
+            $('#city-editor').open=false;
             await refreshState();renderWeather();refreshWidgetPreviews();toast('Город сохранён · '+city.name);
           } catch(error) { toast(error.message,true); }
           finally { cityBusy=false;renderWidgetControls(); }

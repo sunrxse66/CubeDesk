@@ -224,6 +224,22 @@ class LocalAppTests(unittest.TestCase):
             with self.request('/api/pet/preview') as response:
                 with Image.open(io.BytesIO(response.read())) as image:self.assertEqual(image.size,(240,240))
             with self.request('/api/state') as response:self.assertTrue(json.load(response)['pet']['active'])
+
+    def test_pet_selection_persists_and_switches_running_pet_without_second_player(self):
+        self.app.device={'kind':'stream'}
+        def player(host,token,pet,stop,**kw):stop.wait(3)
+        with patch('cubedesk.server.play_pet',side_effect=player) as stream:
+            with self.post('/api/pet/show',{}):pass
+            worker=self.app.worker
+            with self.post('/api/pet/select',{'character':'momo'}) as response:
+                self.assertEqual(json.load(response)['pet']['id'],'momo')
+            self.assertIs(self.app.worker,worker)
+            self.assertEqual(stream.call_count,1)
+            loaded=AppState(self.app.storage)
+            self.assertEqual(loaded.pet.character,'momo')
+            with self.assertRaises(urllib.error.HTTPError):self.post('/api/pet/select',{'character':'invalid'})
+            self.assertEqual(self.app.pet.character,'momo')
+            self.app.stop.set();worker.join(2)
             with self.post('/api/widgets/show',{'kind':'clock'}):pass
             self.app.stop.set();self.app.worker.join(2)
 
