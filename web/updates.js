@@ -11,6 +11,9 @@ function renderUpdates() {
   if (!updateState) return;
   const u = updateState, device = state?.device;
   $('#updates-status').textContent = installingApp ? 'CubeDesk перезапускается. Подождите, панель подключится автоматически…' : u.message;
+  const last = u.last_install;
+  $('#update-install-result').hidden = !last;
+  $('#update-install-result').textContent = !last ? '' : last.status === 'installed' ? `Обновление до ${last.version} успешно установлено.` : last.status === 'rolled_back' ? 'Новая версия не запустилась. Предыдущая версия восстановлена автоматически; ваши данные сохранены.' : 'Последняя установка не завершилась. Текущая версия сохранена; подробности — в файле update-result.json.';
   $('#updates-check').disabled = u.busy || installingApp;
   $('#updates-progress').hidden = u.status !== 'downloading';
   $('#updates-progress').value = u.progress;

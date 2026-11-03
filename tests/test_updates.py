@@ -29,6 +29,17 @@ def fixture(version='9.0.0'):
 
 
 class UpdateTests(unittest.TestCase):
+    def test_last_install_result_is_visible_without_private_exception_details(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=UpdateService(Path(directory));service.directory.mkdir()
+            result=service.directory/'update-result.json'
+            result.write_text(json.dumps({'status':'rolled_back','version':'1.6.1','message':'private local exception path'}),'utf-8-sig')
+            state=service.public()
+            self.assertEqual(state['last_install'],{'status':'rolled_back','version':'1.6.1'})
+            self.assertNotIn('private local exception',json.dumps(state))
+            result.write_text('broken','utf8')
+            self.assertIsNone(service.public()['last_install'])
+
     def test_version_comparison_is_numeric_and_rejects_unstable_tags(self):
         self.assertGreater(version_tuple('1.10.0'), version_tuple('1.9.9'))
         self.assertEqual(version_tuple('PCStream v1.7'), (1,7,0))

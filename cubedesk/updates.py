@@ -135,14 +135,23 @@ class UpdateService:
                       'notes': '', 'ready': [], 'busy': False}
 
     def public(self):
+        last_install = None
+        try:
+            result = json.loads((self.directory / 'update-result.json').read_text('utf-8-sig'))
+            if isinstance(result, dict) and result.get('status') in ('installed', 'rolled_back', 'error'):
+                last_install = {'status': result['status'], 'version': str(result.get('version', ''))[:30]}
+        except (OSError, ValueError, TypeError):
+            pass
         with self.lock:
-            return dict(self.state, ready=list(self.staged), install_supported=os.name == 'nt' and bool(getattr(sys, 'frozen', False)))
+            return dict(self.state, ready=list(self.staged), last_install=last_install,
+                        install_supported=os.name == 'nt' and bool(getattr(sys, 'frozen', False)))
 
     def _run(self, status, action):
         with self.lock:
             if self.state['busy']:
                 raise ValueError('Обновление уже выполняется')
             self.state.update(status=status, busy=True, progress=0)
+            self.state['message'] = 'Проверяем GitHub Releases…' if status == 'checking' else 'Загружаем обновление…'
         def work():
             try:
                 action()
