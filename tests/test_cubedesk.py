@@ -60,6 +60,18 @@ class LocalAppTests(unittest.TestCase):
                 self.request(path,b'{}')
             self.assertEqual(caught.exception.code,403)
 
+    def test_helper_failure_keeps_the_panel_and_stream_controller_running(self):
+        with patch.object(self.app.updates,'install_app',side_effect=ValueError('helper failed')),patch.object(self.app,'_stop_stream') as stop:
+            with self.assertRaises(urllib.error.HTTPError):self.post('/api/updates/install-app',{})
+            stop.assert_not_called()
+        with self.request('/api/health') as response:self.assertEqual(response.status,200)
+
+    def test_shutdown_is_blocked_while_firmware_is_being_written(self):
+        self.app.job.update(running=True,kind='firmware')
+        with self.assertRaises(urllib.error.HTTPError):self.post('/api/shutdown',{})
+        with self.request('/api/health') as response:self.assertEqual(response.status,200)
+        self.app.job['running']=False
+
     def test_reopening_same_profile_reuses_only_a_verified_local_instance(self):
         self.assertTrue(existing_instance(self.server.server_port,self.app.storage))
         self.assertFalse(existing_instance(self.server.server_port,self.app.storage/'other-profile'))

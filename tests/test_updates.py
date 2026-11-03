@@ -3,11 +3,13 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import os
+import base64
 import unittest
 from unittest.mock import patch
 
 from cubedesk import REPOSITORY, VERSION
-from cubedesk.updates import UpdateService, release_manifest, verify_file, version_tuple, flash_firmware, SafeRedirect
+from cubedesk.updates import UpdateService, release_manifest, verify_file, version_tuple, flash_firmware, SafeRedirect, launch_windows_helper
 
 
 def fixture(version='9.0.0'):
@@ -29,6 +31,31 @@ def fixture(version='9.0.0'):
 
 
 class UpdateTests(unittest.TestCase):
+    @unittest.skipUnless(os.name=='nt','Windows process launcher')
+    def test_frozen_launcher_clears_dll_path_and_requires_ready_handshake(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ready=Path(directory)/'ready.json';ready.write_text(json.dumps({'nonce':'test-nonce'}),'utf-8-sig')
+            with patch('cubedesk.updates.ctypes.windll.kernel32.SetDllDirectoryW') as dll,patch('cubedesk.updates.subprocess.Popen') as spawn,patch('cubedesk.updates.sys._MEIPASS',r'C:\AppTemp',create=True):
+                launch_windows_helper(['powershell.exe','-File',r"C:\O'Neil\update.ps1"],Path(directory),ready,'test-nonce')
+            self.assertIsNone(dll.call_args_list[0].args[0])
+            self.assertEqual(dll.call_args_list[-1].args[0],r'C:\AppTemp')
+            args=spawn.call_args.args[0]
+            broker=base64.b64decode(args[-1]).decode('utf-16-le')
+            self.assertIn('Invoke-CimMethod',broker)
+            self.assertIn("O''Neil",broker)
+            self.assertTrue(args[0].lower().endswith('powershell.exe'))
+            self.assertEqual(spawn.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
+            self.assertFalse(ready.exists())
+
+    @unittest.skipUnless(os.name=='nt','Windows process launcher')
+    def test_failed_broker_leaves_a_cancel_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ready=Path(directory)/'ready.json'
+            with patch('cubedesk.updates.ctypes.windll.kernel32.SetDllDirectoryW'),patch('cubedesk.updates.subprocess.Popen') as spawn:
+                spawn.return_value.poll.return_value=1
+                with self.assertRaises(ValueError):launch_windows_helper(['powershell.exe'],Path(directory),ready,'nonce')
+            self.assertTrue(Path(str(ready)+'.cancel').exists())
+
     def test_last_install_result_is_visible_without_private_exception_details(self):
         with tempfile.TemporaryDirectory() as directory:
             service=UpdateService(Path(directory));service.directory.mkdir()

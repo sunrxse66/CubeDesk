@@ -17,6 +17,7 @@ document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('clic
 window.addEventListener('hashchange', () => page(location.hash.slice(1)));
 function renderState() {
   const {device:d,job:j} = state; const connected = ['stock','stream'].includes(d.kind);
+  $('#exit-app').disabled = j.running && j.kind === 'firmware';
   const badge = $('#connection-badge'); badge.className = `status ${connected ? 'online' : d.kind === 'offline' ? 'offline' : ''} ${j.running ? 'busy' : ''}`;
   badge.replaceChildren(Object.assign(document.createElement('i'),{}),document.createTextNode(j.running ? (j.kind === 'stream' ? 'Воспроизводим' : 'Подождите…') : connected ? 'Кубик подключён' : 'Не подключён'));
   $('#device-mode').textContent = d.kind === 'stock' ? 'Штатная прошивка' : d.kind === 'stream' ? 'Потоковый режим' : 'Ожидает подключения';

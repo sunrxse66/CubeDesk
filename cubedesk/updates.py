@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import ctypes
 import hashlib
 import http.client
 import json
@@ -23,6 +24,50 @@ from cubedesk import VERSION, REPOSITORY
 ASSET_NAMES = {'app': 'CubeDesk.exe', 'firmware': 'HelloCubic-PCStream-universal.bin'}
 LIMITS = {'app': 100 * 1024 * 1024, 'firmware': 1044464}
 DOWNLOAD_HOSTS = {'github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'}
+LAUNCH_LOCK = threading.Lock()
+
+
+def launch_windows_helper(command, directory, ready_path, nonce):
+    """Broker outside the frozen process tree, then require a live-helper handshake."""
+    def literal(value):
+        return "'" + str(value).replace("'", "''") + "'"
+    system_ps = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    command = [str(system_ps), *command[1:]]
+    broker = ("$ErrorActionPreference='Stop'; "
+        "$s=New-CimInstance -CimClass (Get-CimClass Win32_ProcessStartup) -ClientOnly; $s.ShowWindow=0; "
+        "$r=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine=" +
+        literal(subprocess.list2cmdline(command)) + ";CurrentDirectory=" + literal(Path(directory).resolve()) +
+        ";ProcessStartupInformation=$s}; if($r.ReturnValue -ne 0){throw ('Update helper launch failed: '+$r.ReturnValue)}")
+    environment = {k:v for k,v in os.environ.items() if not k.startswith('_PYI_') and k != '_MEIPASS2'}
+    environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
+    bundle = getattr(sys, '_MEIPASS', None)
+    if bundle:
+        environment['PATH'] = os.pathsep.join(p for p in environment.get('PATH','').split(os.pathsep)
+                                             if not p.lower().startswith(str(bundle).lower()))
+    with LAUNCH_LOCK, (Path(directory) / 'install-launch.log').open('wb') as log:
+        # PyInstaller changes the process DLL search path. System PowerShell must
+        # inherit the standard Windows path, not the bundle's Python/Pillow DLLs.
+        ctypes.windll.kernel32.SetDllDirectoryW(None)
+        try:
+            process = subprocess.Popen([str(system_ps), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                '-EncodedCommand', base64.b64encode(broker.encode('utf-16-le')).decode()],
+                creationflags=subprocess.CREATE_NO_WINDOW, env=environment, cwd=str(directory),
+                close_fds=True, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+        finally:
+            if bundle: ctypes.windll.kernel32.SetDllDirectoryW(str(bundle))
+    deadline = time.monotonic() + 12
+    while time.monotonic() < deadline:
+        try:
+            result = json.loads(Path(ready_path).read_text('utf-8-sig'))
+            if result.get('nonce') == nonce:
+                Path(ready_path).unlink(missing_ok=True)
+                return
+        except (OSError, ValueError, TypeError):
+            pass
+        if process.poll() not in (None, 0): break
+        time.sleep(.1)
+    Path(str(ready_path) + '.cancel').write_text('cancelled','ascii')
+    raise ValueError('Помощник обновления не запустился. Приложение продолжает работать. Подробности: updates/install-launch.log.')
 
 
 def version_tuple(value):
@@ -262,14 +307,12 @@ class UpdateService:
         script = self.directory / 'install-update.ps1'
         shutil.copyfile(Path(__file__).parent / 'resources/install-update.ps1', script)
         nonce = secrets.token_hex(24)
+        ready_path = self.directory / ('install-ready-' + nonce + '.json')
         command = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(script),
                    '-ParentPid', str(os.getpid()), '-Target', str(target), '-Candidate', str(candidate),
                    '-Sha256', spec['sha256'], '-ExpectedVersion', spec['version'], '-HealthToken', nonce,
-                   '-Port', str(port), '-DataDir', str(Path(storage).resolve())]
-        environment = {k: v for k, v in os.environ.items() if not k.startswith('_PYI_') and k != '_MEIPASS2'}
-        environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
-        subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS, env=environment,
-                         close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                   '-Port', str(port), '-DataDir', str(Path(storage).resolve()), '-ReadyPath', str(ready_path.resolve())]
+        launch_windows_helper(command, self.directory, ready_path, nonce)
         with self.lock:
             self.state.update(status='installing', message='Устанавливаем обновление. Панель откроется после перезапуска.')
 

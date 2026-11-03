@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory=$true)][string]$ExpectedVersion,
     [Parameter(Mandatory=$true)][string]$HealthToken,
     [Parameter(Mandatory=$true)][int]$Port,
-    [Parameter(Mandatory=$true)][string]$DataDir
+    [Parameter(Mandatory=$true)][string]$DataDir,
+    [Parameter(Mandatory=$true)][string]$ReadyPath
 )
 $ErrorActionPreference = 'Stop'
 $Target = [IO.Path]::GetFullPath($Target)
@@ -16,6 +17,7 @@ $Backup = $Target + '.previous'
 $ResultPath = Join-Path $DataDir 'updates/update-result.json'
 $StartedApp = $null
 $MovedOld = $false
+$env:PYINSTALLER_RESET_ENVIRONMENT = '1'
 
 function Save-Result([string]$Status, [string]$Message) {
     $result = @{status=$Status; version=$ExpectedVersion; message=$Message; time=(Get-Date).ToUniversalTime().ToString('o')}
@@ -54,9 +56,11 @@ try {
     if ((Get-FileHash -LiteralPath $Candidate -Algorithm SHA256).Hash.ToLowerInvariant() -ne $Sha256) {
         throw 'Downloaded executable checksum mismatch.'
     }
+    @{nonce=$HealthToken} | ConvertTo-Json | Set-Content -LiteralPath $ReadyPath -Encoding UTF8
     # Wait for the HTTP reply and old child to exit, then for the onefile bootloader lock.
     $old = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue
     if ($old -and -not $old.WaitForExit(60000)) { throw 'The previous application did not exit.' }
+    if (Test-Path -LiteralPath ($ReadyPath + '.cancel')) { throw 'Update cancelled before application shutdown.' }
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
     while (-not $MovedOld) {
         try {

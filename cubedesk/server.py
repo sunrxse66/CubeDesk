@@ -526,6 +526,8 @@ class Handler(BaseHTTPRequestHandler):
                 app.stop.set()
                 result = {"ok": True}
             elif url.path == "/api/shutdown":
+                if app.job['running'] and app.job['kind'] == 'firmware':
+                    raise ValueError('Дождитесь завершения обновления прошивки')
                 app.stop.set()
                 result = {"ok": True}
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
