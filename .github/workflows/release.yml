@@ -1,0 +1,74 @@
+name: Build and release CubeDesk
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cubedesk-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: '1'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Expand initial source upload if present
+        run: |
+          if (-not (Test-Path -LiteralPath 'CubeDesk-bootstrap.zip')) { exit 0 }
+          @'
+          from pathlib import Path, PurePosixPath
+          import hashlib, zipfile, stat
+          archive = Path('CubeDesk-bootstrap.zip')
+          expected = Path('CubeDesk-bootstrap.sha256').read_text('utf8').strip()
+          if hashlib.sha256(archive.read_bytes()).hexdigest() != expected:
+              raise ValueError('Initial source archive checksum mismatch')
+          with zipfile.ZipFile(archive) as source:
+              if sum(f.file_size for f in source.infolist()) > 30 * 1024 * 1024:
+                  raise ValueError('Initial source archive is too large')
+              for entry in source.infolist():
+                  name = PurePosixPath(entry.filename)
+                  if name.is_absolute() or '..' in name.parts or '\\' in entry.filename or '.git' in name.parts or ':' in entry.filename:
+                      raise ValueError('Invalid source path')
+                  if stat.S_ISLNK(entry.external_attr >> 16):
+                      raise ValueError('Source symlinks are not allowed')
+              source.extractall('.')
+          archive.unlink()
+          Path('CubeDesk-bootstrap.sha256').unlink()
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'Publish reviewed CubeDesk sources'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+      - name: Build Windows application
+        run: python build_app.py
+      - name: Build universal firmware
+        run: |
+          python -m platformio run -d firmware
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python package_firmware.py
+      - name: Package public assets
+        run: python release.py
+      - name: Publish stable release
+        run: python publish_release.py
