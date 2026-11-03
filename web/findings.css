@@ -1,0 +1,18 @@
+.finding-card{padding:17px 20px;margin:-6px 0 22px;background:linear-gradient(115deg,#fff,#f4f7f3)}
+.finding-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.finding-heading h3{margin-top:5px;font-size:16px}
+.finding-heading>.secondary{font-size:10px;padding:9px 12px;white-space:nowrap}
+.finding-source{font-size:10px;line-height:1.5;margin:8px 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finding-empty{display:flex;align-items:center;gap:13px;padding:9px 0 2px}
+.finding-empty>span{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;background:#e7eee7;border-radius:12px;color:#8c9c7c;font-size:27px}
+.finding-empty p{font-size:11px;margin:0;line-height:1.7}
+.finding-result{display:flex;align-items:center;gap:15px;min-width:0}
+.finding-result>img{width:80px;height:80px;object-fit:contain;border:5px solid #fffaf0;border-bottom-width:10px;box-shadow:0 3px 12px #5b70551a;transform:rotate(-3deg);border-radius:3px;background:#f6f1e7}
+.finding-copy{min-width:0;flex:1}.finding-copy>strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finding-copy>span{display:block;font-size:10px;color:var(--muted);margin-top:5px}
+.finding-actions{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:7px}.finding-actions .text-link{font-size:10px;min-height:30px;padding:5px 0}
+.finding-frame{display:flex;align-items:center;justify-content:space-between;gap:15px;border-top:1px solid #e3e9df;padding-top:9px;margin-top:12px;color:#7e8b73;font-size:10px}
+.finding-frame>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.finding-frame>.text-link{font-size:10px;white-space:nowrap}
+#findings-dialog label{display:block;font-size:11px;color:var(--muted)}#findings-dialog input{display:block;padding:12px;margin-top:8px}
+#findings-folder-message{min-height:40px}#findings-browse{font-size:12px;margin-top:8px}
+@media(max-width:650px){.finding-card{padding:13px}.finding-heading h3{font-size:15px}.finding-heading .widget-number{font-size:7px}.finding-heading>.secondary{padding:8px;font-size:9px}.finding-result{gap:12px;align-items:flex-start}.finding-result>img{width:62px;height:62px}.finding-actions{gap:2px 14px}.finding-copy>strong{font-size:11px}.finding-copy>span{font-size:9px}.finding-actions .text-link{font-size:10px}.finding-source{font-size:9px}}

@@ -8,6 +8,7 @@
   <title>CubeDesk — ваш маленький экран</title>
   <link rel="icon" type="image/svg+xml" href="/cube.svg">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/findings.css">
   <script src="/app.js" defer></script>
   <script src="/widgets.js" defer></script>
   <script src="/pet.js" defer></script>
@@ -80,8 +81,15 @@
       <section class="pet-card card" aria-labelledby="pet-heading">
         <div class="pet-scene"><img id="pet-preview" alt="Моти — котик внутри кубика" width="240" height="240"></div>
         <div class="pet-description"><div class="pet-topline"><span class="widget-number">МАЛЕНЬКИЙ ДРУГ</span><div class="pet-picker" role="group" aria-label="Выбор питомца"><button type="button" data-pet="moti" aria-pressed="true"><i class="moti-dot"></i>Моти</button><button type="button" data-pet="momo" aria-pressed="false"><i class="momo-dot"></i>Момо</button></div></div>
-          <div class="pet-name-row"><h2 id="pet-heading">Моти</h2><span class="pet-status"><i></i><span id="pet-status">Отдыхает</span></span></div><p id="pet-description">Подойдёт к стеклу и покажет обе лапки.</p><div class="pet-actions"><button id="pet-call" class="primary" disabled>Позвать ♡</button><button id="pet-show" class="secondary" disabled>Показать питомца</button></div>
+          <div class="pet-name-row"><h2 id="pet-heading">Моти</h2><span class="pet-status"><i></i><span id="pet-status">Отдыхает</span></span></div><p id="pet-description">Подойдёт к стеклу и покажет обе лапки.</p><div class="pet-actions"><button id="pet-call" class="primary" disabled>Позвать ♡</button><button id="pet-show" class="secondary" disabled>Показать питомца</button><button id="pet-find" class="secondary" hidden>Принести находку ✧</button></div>
         </div>
+      </section>
+      <section id="findings-card" class="finding-card card" aria-labelledby="findings-heading" hidden>
+        <div class="finding-heading"><div><span class="widget-number">МАЛЕНЬКИЕ СОКРОВИЩА</span><h3 id="findings-heading">Находки Момо</h3></div><button id="findings-folder" class="secondary">Выбрать папку</button></div>
+        <p id="findings-source" class="finding-source">Момо будет приносить фотографии из выбранной папки.</p>
+        <div id="findings-empty" class="finding-empty"><span aria-hidden="true">✧</span><p>Доверьте Момо папку с фото — он найдёт в ней что-нибудь особенное.</p></div>
+        <div id="findings-result" class="finding-result" hidden><img id="findings-preview" width="80" height="80" alt="Фотография, которую принёс Момо"><div class="finding-copy"><strong id="findings-name"></strong><span id="findings-caption">Смотрите, что нашёл!</span><div class="finding-actions"><button id="findings-next" class="text-link">Принести другую ↻</button><button id="findings-pin" class="text-link">В рамку ♡</button><button id="findings-open" class="text-link">Открыть оригинал ↗</button></div></div></div>
+        <div id="findings-frame" class="finding-frame" hidden><span id="findings-frame-name"></span><button id="findings-unpin" class="text-link">Снять рамку</button></div>
       </section>
       <div class="widget-section-heading"><h2>На каждый день</h2><span id="widget-now">Выберите виджет</span></div>
       <div class="widget-grid">
@@ -120,5 +128,6 @@
   <div id="toast" class="toast" role="alert" hidden></div>
   <dialog id="folder-dialog"><form id="folder-form"><h2>Подключить папку на ПК</h2><p>В Проводнике откройте нужную папку и скопируйте её полный путь из адресной строки.</p><label for="folder-path">Путь к папке<input id="folder-path" placeholder="C:\Users\…\Pictures\Cube" required></label><p class="hint">Файлы будут читаться прямо отсюда. Копии создавать не нужно.</p><div class="dialog-actions"><button type="button" class="secondary" id="folder-cancel">Отмена</button><button class="primary">Подключить папку</button></div></form></dialog>
   <dialog id="preview-dialog"><button id="preview-close" class="close-dialog" aria-label="Закрыть предпросмотр">×</button><div class="preview-image"><img id="preview-image" alt="Предпросмотр выбранного файла"></div><h2 id="preview-name"></h2><p id="preview-meta" class="hint"></p><div class="dialog-actions"><button id="preview-show" class="primary" disabled>Показать на кубике ↗</button></div></dialog>
+  <dialog id="findings-dialog"><form id="findings-form"><h2>Фотографии для Момо</h2><p>Выберите папку на этом ПК. Момо ищет JPG, PNG, WebP и BMP также во вложенных папках. Оригиналы остаются на месте.</p><button type="button" id="findings-browse" class="secondary">Выбрать в Проводнике…</button><label for="findings-path">Или вставьте полный путь<input id="findings-path" placeholder="C:\Users\…\Pictures" required></label><p id="findings-folder-message" class="hint" role="status">Фотографии обрабатываются локально и передаются только вашему кубику.</p><div class="dialog-actions"><button type="button" id="findings-cancel" class="secondary">Отмена</button><button id="findings-save" class="primary">Доверить папку Момо</button></div></form></dialog>
 </body>
 </html>

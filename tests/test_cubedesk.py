@@ -225,6 +225,45 @@ class LocalAppTests(unittest.TestCase):
                 with Image.open(io.BytesIO(response.read())) as image:self.assertEqual(image.size,(240,240))
             with self.request('/api/state') as response:self.assertTrue(json.load(response)['pet']['active'])
 
+    def test_finding_actions_reuse_pet_player_and_pin_survives_restart(self):
+        photos=Path(self.temp.name)/'photos';photos.mkdir()
+        Image.new('RGB',(60,40),'blue').save(photos/'memory.png')
+        self.app.device={'kind':'stream'}
+        with self.post('/api/pet/findings/folder',{'folder':str(photos)}) as response:
+            self.assertEqual(json.load(response)['count'],1)
+        def player(host,token,pet,stop,**kw):stop.wait(3)
+        with patch('cubedesk.server.play_pet',side_effect=player) as stream:
+            with self.post('/api/pet/show',{}):pass
+            worker=self.app.worker
+            with self.post('/api/pet/findings/next',{}):pass
+            self.assertIs(self.app.worker,worker);self.assertEqual(stream.call_count,1)
+            self.assertEqual(self.app.pet.character,'momo')
+            self.assertTrue(self.app.pet.finding_busy())
+            with self.assertRaises(urllib.error.HTTPError):self.post('/api/pet/findings/next',{})
+            ident=self.app.findings.current['id']
+            with self.post('/api/pet/findings/pin',{'id':ident}):pass
+            with self.request('/api/pet/findings/preview?kind=frame') as response:
+                with Image.open(io.BytesIO(response.read())) as image:self.assertEqual(image.size,(240,240))
+            restored=AppState(self.app.storage)
+            self.assertEqual(restored.findings.public()['frame']['id'],ident)
+            self.assertIsNotNone(restored.pet.framed_photo)
+            with self.post('/api/pet/findings/unpin',{}):pass
+            self.assertIsNone(self.app.pet.framed_photo)
+
+    def test_finding_failure_does_not_stop_working_stream_and_mutations_require_csrf(self):
+        self.app.device={'kind':'stream'}
+        with patch('cubedesk.server.play_pet',side_effect=lambda host,token,pet,stop,**kw:stop.wait(3)):
+            with self.post('/api/pet/show',{}):pass
+            worker=self.app.worker
+            with self.assertRaises(urllib.error.HTTPError):self.post('/api/pet/findings/next',{})
+            self.assertIs(self.app.worker,worker);self.assertFalse(self.app.stop.is_set())
+            for action in ('folder','browse','next','pin','unpin','open'):
+                with self.subTest(action=action),self.assertRaises(urllib.error.HTTPError) as caught:
+                    self.request('/api/pet/findings/'+action,b'{}')
+                self.assertEqual(caught.exception.code,403)
+        with patch('cubedesk.server.pick_photo_folder',return_value=None):
+            with self.post('/api/pet/findings/browse',{}) as response:self.assertIsNone(json.load(response)['folder'])
+
     def test_pet_selection_persists_and_switches_running_pet_without_second_player(self):
         self.app.device={'kind':'stream'}
         def player(host,token,pet,stop,**kw):stop.wait(3)

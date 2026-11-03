@@ -98,3 +98,21 @@ class PetTests(unittest.TestCase):
         self.assertFalse(pet.pending)
         with Image.open(io.BytesIO(sent[0])) as frame:self.assertEqual(frame.size,(120,120))
         self.assertEqual(closed,[True])
+
+    def test_presented_photo_uses_full_resolution_with_small_buffer_fallback(self):
+        for maximum,expected_edge in ((8192,240),(2048,120)):
+            with self.subTest(maximum=maximum):
+                stop=threading.Event();pet=PetState(character='momo');sent=[];stats=[]
+                pet.request_finding({'image':Image.new('RGB',(300,200),'blue')})
+                pet.activate_pending()
+                pet.finding_at-=7.0
+                class Link:
+                    flags=7;max_jpeg=maximum
+                    def __init__(self,*a,**kw):pass
+                    def send_jpeg(self,data):sent.append(data);stop.set();return {'transport_ms':10}
+                    def close(self):pass
+                with patch('cubedesk.pet.CubeConnection',Link):
+                    play_pet('unused','secret',pet,stop,report=lambda _:None,on_stats=stats.append)
+                self.assertLessEqual(len(sent[0]),maximum)
+                with Image.open(io.BytesIO(sent[0])) as frame:self.assertEqual(frame.size,(expected_edge,expected_edge))
+                self.assertEqual(stats[0]['resolution'],expected_edge)

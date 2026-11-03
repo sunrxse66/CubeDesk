@@ -17,6 +17,9 @@ RETURN = 2.4
 FPS = 12
 LABELS = {'idle':'Отдыхает', 'approaching':'Идёт к вам', 'greeting':'У стекла', 'returning':'Возвращается'}
 LABELS['curious']='Присматривается'
+LABELS.update(departing='Ушёл за находкой', searching='Ищет сокровище',
+              bringing='Несёт фотографию', presenting='Смотрите, что нашёл!', returning_find='Уносит находку')
+FIND_TIMING = (1.7, 2.2, 2.6, 8.0, 2.4)
 CHARACTERS = {'moti': {'name':'Моти','look':0.0,'approach':APPROACH,'hold':HOLD,'return':RETURN},
               'momo': {'name':'Момо','look':1.0,'approach':2.6,'hold':4.0,'return':2.7}}
 
@@ -44,6 +47,11 @@ class PetState:
         self.cached_key=None
         self.cached_image=None
         self.character=validate_character(character)
+        self.finding_pending=None
+        self.finding_at=None
+        self.finding_photo=None
+        self.finding_depth=0.0
+        self.framed_photo=None
 
     def select(self, character, now=None):
         character=validate_character(character)
@@ -56,15 +64,38 @@ class PetState:
     def reset(self):
         with self.lock:
             self.called_at=None;self.pending=False;self.start_depth=0.0
+            self.finding_pending=None;self.finding_at=None;self.finding_photo=None
             self.generation+=1
+
+    def set_frame(self, image):
+        with self.lock:
+            self.framed_photo=image.copy() if image is not None else None
+            self.generation+=1
+
+    def request_finding(self, photo):
+        with self.lock:
+            if self.character!='momo':raise ValueError('Находки приносит Момо.')
+            self.pending=False
+            self.finding_pending=photo['image'].copy()
+            self.generation+=1
+
+    def finding_busy(self):
+        with self.lock:
+            return self.finding_pending is not None or self.pose()['phase'] in ('departing','searching','bringing','returning_find')
 
     def request_call(self):
         with self.lock:
+            self.finding_pending=None;self.finding_at=None
             self.pending=True;self.calls+=1
 
     def activate_pending(self, now=None):
         now=time.monotonic() if now is None else now
         with self.lock:
+            if self.finding_pending is not None:
+                self.finding_depth=self.pose(now)['depth']
+                self.finding_photo=self.finding_pending
+                self.finding_pending=None;self.finding_at=now;self.called_at=None
+                self.generation+=1
             if not self.pending:return
             pose=self.pose(now)
             timing=CHARACTERS[self.character]
@@ -77,6 +108,20 @@ class PetState:
     def pose(self, now=None):
         now=time.monotonic() if now is None else now
         with self.lock:
+            if self.finding_at is not None:
+                elapsed=max(0,now-self.finding_at)
+                cursor=0
+                for phase,duration in zip(('departing','searching','bringing','presenting','returning_find'), FIND_TIMING):
+                    if elapsed<cursor+duration:
+                        local=elapsed-cursor;progress=ease(local/duration)
+                        depth=(self.finding_depth*(1-progress) if phase=='departing' else
+                               progress if phase=='bringing' else 1-progress if phase=='returning_find' else
+                               1.0 if phase=='presenting' else 0.0)
+                        offset=(-145*progress if phase=='departing' else 145*(1-progress) if phase=='bringing' else 0)
+                        return {'phase':phase,'depth':depth,'time':now-self.epoch,'phase_elapsed':local,
+                                'offset_x':offset,'opacity':0 if phase=='searching' else 1,
+                                'has_photo':phase in ('bringing','presenting','returning_find')}
+                    cursor+=duration
             elapsed=now-self.called_at if self.called_at is not None else float('inf')
             timing=CHARACTERS[self.character]
             look,approach,hold,back=(timing[k] for k in ('look','approach','hold','return'))
@@ -95,15 +140,19 @@ class PetState:
     def status(self):
         with self.lock:
             pose=self.pose()
-            return {'phase':pose['phase'],'label':'Зову…' if self.pending else LABELS[pose['phase']],
-                    'pending':self.pending,'calls':self.calls,'id':self.character,'name':CHARACTERS[self.character]['name']}
+            return {'phase':pose['phase'],'label':'За находкой…' if self.finding_pending is not None else 'Зову…' if self.pending else LABELS[pose['phase']],
+                    'pending':self.pending,'finding_busy':self.finding_busy(),
+                    'finding_pending':self.finding_pending is not None,
+                    'calls':self.calls,'id':self.character,'name':CHARACTERS[self.character]['name']}
 
     def image(self, now=None):
         now=time.monotonic() if now is None else now
         with self.lock:
             key=(self.generation,int(now*FPS))
             if key!=self.cached_key:
-                self.cached_image=render_pet(self.pose(now),self.character);self.cached_key=key
+                pose=self.pose(now)
+                self.cached_image=(render_momo(pose,self.framed_photo,self.finding_photo) if self.character=='momo'
+                                   else render_pet(pose,self.character));self.cached_key=key
             return self.cached_image.copy()
 
 
@@ -239,17 +288,29 @@ def momo_room():
     return image
 
 
-def render_momo(pose):
+def render_momo(pose,framed_photo=None,finding_photo=None):
     """Colourpoint portrait and Momo's own curious / prowl / single-paw greeting."""
-    image=momo_room().copy()
+    background=momo_room().copy()
+    if framed_photo is not None:
+        bd=ImageDraw.Draw(background)
+        bd.line((380,64,359,85),fill='#a7b1a7',width=2)
+        bd.line((380,64,402,85),fill='#a7b1a7',width=2)
+        bd.rounded_rectangle((317,85,444,225),radius=7,fill='#a78b71')
+        bd.rectangle((324,92,437,218),fill='#faf3e7')
+        from PIL import ImageOps
+        photo=ImageOps.contain(framed_photo,(103,112),Image.Resampling.LANCZOS)
+        background.paste(photo, (329+(103-photo.width)//2,98+(112-photo.height)//2))
+    image=Image.new('RGBA',(480,480))
     depth,t,phase=pose['depth'],pose['time'],pose['phase']
+    actual_phase=phase
+    phase={'departing':'returning','bringing':'approaching','presenting':'greeting','returning_find':'returning'}.get(phase,phase)
     local=pose.get('phase_elapsed',t)
     walking=phase in ('approaching','returning')
     scale=.73+.86*depth
     progress=local/2.6 if phase=='approaching' else local/2.7
     # A low, deliberate prowl with a side step, unlike Moti's straight walk.
     crouch=math.sin(math.pi*max(0,min(1,progress)))*5 if walking else 0
-    cx=120+(math.sin(progress*math.pi)*7 if walking else math.sin(t*.9)*(1-depth))
+    cx=120+pose.get('offset_x',0)+(math.sin(progress*math.pi)*7 if walking else math.sin(t*.9)*(1-depth))
     cy=119+20*depth+crouch+math.sin(t*1.6)*.65
     def point(x,y):return ((cx+x*scale)*2,(cy+y*scale)*2)
     def box(bounds):return (*point(*bounds[:2]),*point(*bounds[2:]))
@@ -344,10 +405,35 @@ def render_momo(pose):
     if phase=='greeting' and .25<local<.9:
         radius=9+(local-.25)*14
         ellipse((36-radius,23-radius,36+radius,23+radius),None,'#c3dad8',.6)
+    if pose.get('has_photo') and finding_photo is not None:
+        from PIL import ImageOps
+        bounds=tuple(round(v) for v in box((-44,7,44,58)))
+        d.rounded_rectangle(bounds,radius=max(2,round(3*scale)),fill='#fffaf0',outline='#c5ac88',width=2)
+        area=tuple(round(v) for v in box((-39,11,39,49)))
+        photo=ImageOps.contain(finding_photo,(max(1,area[2]-area[0]),max(1,area[3]-area[1])),Image.Resampling.LANCZOS)
+        image.paste(photo,(area[0]+(area[2]-area[0]-photo.width)//2,area[1]+(area[3]-area[1]-photo.height)//2))
+        d=ImageDraw.Draw(image)
+        for sign in (-1,1):
+            px=sign*44
+            ellipse((px-7,30,px+7,44),dark,edge)
+            line([(px-2,33),(px-2,39)],'#927260',.6)
+        # A little gold seal on the bottom of the print.
+        ellipse((-2,52,2,56),'#d6b76b')
+    if not pose.get('opacity',1): image=Image.new('RGBA',image.size)
+    image=Image.alpha_composite(background,image)
+    if actual_phase=='searching':
+        sd=ImageDraw.Draw(image)
+        for index in range(3):
+            x=174+index*66;y=330-index*14
+            alpha=80+round(100*(.5+.5*math.sin(local*3-index)))
+            sd.ellipse((x,y,x+20,y+15),fill=(124,153,140,alpha))
+            for dx,dy in ((-3,-10),(8,-15),(19,-10)):
+                sd.ellipse((x+dx,y+dy,x+dx+7,y+dy+8),fill=(124,153,140,alpha))
+        sd.text((240,410),'Момо ищет сокровище'+'.'*(1+int(local*2)%3),font=font(9),fill='#697d7d',anchor='mt')
     glass=Image.new('RGBA',image.size)
     ImageDraw.Draw(glass).line((29,25,54,77),fill=(255,255,255,round(22+30*depth)),width=4)
     image=Image.alpha_composite(image,glass)
-    if depth<.2:
+    if depth<.2 and actual_phase=='idle':
         d=ImageDraw.Draw(image)
         d.text((240,428),'Момо',font=font(12,'bold'),fill='#697d7d',anchor='mt')
         d.text((240,462),'Любопытный тихоня',font=font(8),fill='#8a9994',anchor='mb')
@@ -365,14 +451,19 @@ def play_pet(host,token,pet,stop,report=print,on_stats=None):
                     report('Питомец · '+pet.status()['name'])
                 pet.activate_pending()
                 image=pet.image()
+                phase=pet.status()['phase']
+                edge=240 if phase=='presenting' else 120
                 if connection.flags & 1:
-                    payload=encode_jpeg(image,connection.max_jpeg,80,edge=120)[0]
+                    try:payload=encode_jpeg(image,connection.max_jpeg,80,edge=edge)[0]
+                    except ValueError:
+                        edge=120
+                        payload=encode_jpeg(image,connection.max_jpeg,75,edge=edge)[0]
                     stats=connection.send_jpeg(payload)
                 else:stats=connection.send(rgb565(image))
                 frames+=1
-                if on_stats:on_stats(dict(stats,widget='pet',frames=frames,resolution=120 if connection.flags & 1 else 240,
+                if on_stats:on_stats(dict(stats,widget='pet',frames=frames,resolution=edge if connection.flags & 1 else 240,
                                           phase=pet.status()['phase'],pet_character=pet.status()['id'],updated_at=time.time()))
-                wait_frame(stop,max(0,1/FPS-(time.monotonic()-started)))
+                wait_frame(stop,max(0,1/(6 if phase=='presenting' else FPS)-(time.monotonic()-started)))
             except OSError:
                 if connection:connection.close()
                 connection=None

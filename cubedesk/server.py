@@ -25,6 +25,7 @@ from cubedesk.device import Device, validate_host
 from cubedesk.weather import WeatherService, validate_city
 from cubedesk.widgets import KINDS, render as render_widget, play_widget
 from cubedesk.pet import PetState, play_pet, validate_character
+from cubedesk.findings import PhotoFindings, pick_photo_folder
 from cubedesk import VERSION
 from cubedesk.updates import UpdateService, flash_firmware
 
@@ -63,6 +64,8 @@ class AppState:
         try:self.config['pet_character']=validate_character(self.config['pet_character'])
         except ValueError:self.config['pet_character']='moti'
         self.pet = PetState(character=self.config['pet_character'])
+        self.findings = PhotoFindings(storage)
+        self.pet.set_frame(self.findings.frame['image'] if self.findings.frame else None)
         self.updates = UpdateService(storage)
         self.device = {"kind": "unknown", "host": self.config["host"]}
         self.job = {"running": False, "kind": "", "message": "Готов к подключению", "error": False}
@@ -91,6 +94,7 @@ class AppState:
                     {"has_token": bool(self.config["token"])}, "device": self.device.copy(),
                     "job": self.job.copy(), "playback": self.playback.copy(),
                     "pet": self.pet.status() | {'active': self.job['running'] and self.job.get('scope') == 'pet'},
+                    "findings": self.findings.public(),
                     "events": list(self.events), "version": VERSION}
 
     def _validated_settings(self, data):
@@ -328,6 +332,39 @@ class AppState:
                 self.log('Питомец отдыхает. Последний кадр остаётся на кубике.')
             self.begin('stream',action,scope='pet',widget='pet',file_id=None)
 
+    def photo_folder(self, folder):
+        with self.control:
+            with self.lock:
+                if self.job['running'] and self.job['kind']!='stream':
+                    raise ValueError('Дождитесь завершения текущей операции')
+            result=self.findings.choose(folder)
+            self.pet.reset()
+            self.pet.set_frame(self.findings.frame['image'] if self.findings.frame else None)
+            return result
+
+    def find_photo(self):
+        with self.control:
+            with self.lock:
+                if self.device.get('kind')!='stream':raise ValueError('Сначала подключите кубик с PCStream.')
+                if self.job['running'] and self.job['kind']!='stream':raise ValueError('Дождитесь завершения текущей операции')
+                active=self.job['running'] and self.job.get('scope')=='pet'
+            if active and self.pet.finding_busy():raise ValueError('Момо уже ищет находку. Подождите его возвращения.')
+            photo=self.findings.next()
+            self.select_pet('momo')
+            self.show_pet()
+            self.pet.request_finding(photo)
+
+    def pin_photo(self, ident):
+        with self.control:
+            self.pet.set_frame(self.findings.pin(ident))
+            return self.findings.public()
+
+    def unpin_photo(self):
+        with self.control:
+            self.findings.unpin()
+            self.pet.set_frame(None)
+            return self.findings.public()
+
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
@@ -396,6 +433,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(output.getvalue(),'image/png')
             elif url.path == '/api/pet/state':
                 self.reply(app.public()['pet'])
+            elif url.path == '/api/pet/findings/preview':
+                kind=urllib.parse.parse_qs(url.query).get('kind',['current'])[0]
+                output=io.BytesIO()
+                app.findings.preview(kind).save(output,'JPEG',quality=88)
+                self.reply(output.getvalue(),'image/jpeg')
             elif url.path == '/api/widgets/preview':
                 kind = urllib.parse.parse_qs(url.query).get('kind',['clock'])[0]
                 output = io.BytesIO()
@@ -427,7 +469,7 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path in ("/", "/index.html"):
                 data = (ASSETS / "index.html").read_text("utf-8").replace("__CSRF__", app.csrf).replace('__VERSION__', VERSION)
                 self.reply(data.encode(), "text/html; charset=utf-8")
-            elif url.path in ("/app.js", "/widgets.js", "/pet.js", "/updates.js", "/style.css", "/cube.svg"):
+            elif url.path in ("/app.js", "/widgets.js", "/pet.js", "/updates.js", "/style.css", "/findings.css", "/cube.svg"):
                 path = ASSETS / url.path[1:]
                 self.reply(path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
             elif url.path == "/favicon.ico":
@@ -509,6 +551,20 @@ class Handler(BaseHTTPRequestHandler):
                 result = {'ok':True,'pet':app.public()['pet']}
             elif url.path == '/api/pet/select':
                 result = {'ok':True,'pet':app.select_pet(data.get('character'))}
+            elif url.path == '/api/pet/findings/folder':
+                result = app.photo_folder(data.get('folder'))
+            elif url.path == '/api/pet/findings/browse':
+                result = {'folder':pick_photo_folder()}
+            elif url.path == '/api/pet/findings/next':
+                app.find_photo()
+                result = {'ok':True}
+            elif url.path == '/api/pet/findings/pin':
+                result = app.pin_photo(data.get('id'))
+            elif url.path == '/api/pet/findings/unpin':
+                result = app.unpin_photo()
+            elif url.path == '/api/pet/findings/open':
+                app.findings.open_original(data.get('id'))
+                result = {'ok':True}
             elif url.path == '/api/updates/check':
                 app.updates.check()
                 result = app.updates.public()
