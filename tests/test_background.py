@@ -15,7 +15,9 @@ from cubedesk.server import AppState, running_port
 class ResumeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.storage = Path(self.temp.name)
+        # GitHub's Windows runner uses an 8.3 TEMP alias (RUNNER~1).
+        # Compare canonical paths, as the application does when saving settings.
+        self.storage = Path(self.temp.name).resolve()
         self.apps = []
         self.app = self.new_app()
         self.app.config.update(host='192.168.0.37', token='private-test-key')
