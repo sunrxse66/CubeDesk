@@ -2,7 +2,8 @@
 const $ = selector => document.querySelector(selector);
 const key = $('meta[name="cubedesk-key"]').content;
 let state = null, library = [], importing = false, switching = false, previewId = null, toastTimer, previousJob = false, serverGone = false;
-const titles = {connect:'Подключим ваш кубик',library:'Ваша медиатека',widgets:'Виджеты для вашего кубика',guide:'Всё начинается с подключения',updates:'Всегда актуальный CubeDesk'};
+const titles = {connect:'Подключим ваш кубик',library:'Ваша медиатека',widgets:'Виджеты для вашего кубика',background:'Кубик работает сам',guide:'Всё начинается с подключения',updates:'Всегда актуальный CubeDesk'};
+let backgroundSaving = false;
 const bytes = size => size == null ? '—' : size < 1048576 ? `${Math.round(size / 1024)} КБ` : `${(size / 1048576).toFixed(1)} МБ`;
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function toast(message, error = false) { const el = $('#toast'); el.textContent = message; el.classList.toggle('error', error); el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, error ? 11000 : 5000); }
@@ -17,9 +18,10 @@ document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('clic
 window.addEventListener('hashchange', () => page(location.hash.slice(1)));
 function renderState() {
   const {device:d,job:j} = state; const connected = ['stock','stream'].includes(d.kind);
+  renderBackground();
   $('#exit-app').disabled = j.running && j.kind === 'firmware';
   const badge = $('#connection-badge'); badge.className = `status ${connected ? 'online' : d.kind === 'offline' ? 'offline' : ''} ${j.running ? 'busy' : ''}`;
-  badge.replaceChildren(Object.assign(document.createElement('i'),{}),document.createTextNode(j.running ? (j.kind === 'stream' ? 'Воспроизводим' : 'Подождите…') : connected ? 'Кубик подключён' : 'Не подключён'));
+  badge.replaceChildren(Object.assign(document.createElement('i'),{}),document.createTextNode(j.running ? (j.restoring ? 'Ожидаем кубик' : j.kind === 'stream' ? 'Воспроизводим' : 'Подождите…') : connected ? 'Кубик подключён' : 'Не подключён'));
   $('#device-mode').textContent = d.kind === 'stock' ? 'Штатная прошивка' : d.kind === 'stream' ? 'Потоковый режим' : 'Ожидает подключения';
   $('#connect-button').disabled = j.running || importing; $('#connect-button').textContent = j.running && j.kind === 'connect' ? 'Проверяем…' : connected ? 'Проверить снова' : 'Подключить →';
   const link = $('#device-link'); link.classList.toggle('disabled',!connected); link.href = connected ? `http://${d.host}/` : '#';
@@ -54,6 +56,37 @@ function renderState() {
   if (typeof renderPetControls === 'function') renderPetControls();
 }
 async function refreshState() { if (serverGone) return; try { state = await api('/api/state'); renderState(); } catch { $('#connection-badge').textContent = 'Приложение недоступно'; $('#connect-message').textContent = 'Запустите CubeDesk заново. Сервер не отвечает.'; } }
+function renderBackground() {
+  const b = state.background;
+  if (!b) return;
+  const j = state.job, stream = j.running && j.kind === 'stream';
+  if (!backgroundSaving) {
+    $('#background-startup').checked = b.startup_enabled;
+    $('#background-resume').checked = b.resume_on_start;
+  }
+  $('#background-startup').disabled = backgroundSaving || !b.startup_supported;
+  $('#background-resume').disabled = backgroundSaving;
+  $('#background-startup-help').textContent = b.startup_supported ? 'Оставьте CubeDesk.exe в постоянной папке. Автозапуск можно отключить здесь или в настройках Windows.' : 'Автозапуск настраивается в готовом CubeDesk.exe при обычном запуске.';
+  $('#background-scene').textContent = b.last_scene || 'Пока ничего не выбрано';
+  $('#background-status').textContent = stream ? (j.restoring ? j.message : 'Сейчас на кубике') : b.paused ? 'На паузе. Автоматически не запустится.' : b.has_selection ? (b.resume_on_start ? 'Вернётся при следующем запуске CubeDesk' : 'Автовозобновление выключено') : 'Выберите что-нибудь в медиатеке или виджетах';
+  $('#background-continue').disabled = backgroundSaving || j.running || !b.has_selection;
+  $('#background-pause').disabled = backgroundSaving || !stream;
+}
+for (const [id, setting] of [['background-startup','startup_enabled'], ['background-resume','resume_on_start']]) {
+  $(`#${id}`).addEventListener('change', async event => {
+    const value = event.target.checked;
+    backgroundSaving = true; renderBackground();
+    try { await api('/api/background/settings',{[setting]:value}); await refreshState(); toast('Настройка сохранена'); }
+    catch(error) { toast(error.message,true); }
+    finally { backgroundSaving = false; await refreshState(); }
+  });
+}
+$('#background-continue').addEventListener('click', async () => {
+  try { await api('/api/background/resume',{}); await refreshState(); } catch(error) { toast(error.message,true); }
+});
+$('#background-pause').addEventListener('click', async () => {
+  try { await api('/api/stop',{}); await refreshState(); } catch(error) { toast(error.message,true); }
+});
 function renderLibrary() {
   const filtered = library.filter(item => item.name.toLocaleLowerCase().includes($('#search').value.toLocaleLowerCase()));
   const grid = $('#media-grid'); grid.replaceChildren(); $('#empty-library').hidden = filtered.length > 0;

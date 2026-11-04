@@ -34,7 +34,7 @@ def rgb565(image: Image.Image) -> bytes:
 
 
 class CubeConnection:
-    def __init__(self, host: str, token: str, port: int = 7777, modern: bool = False):
+    def __init__(self, host: str, token: str, port: int = 7777, modern: bool = False, timeout: float = 8):
         encoded = token.encode("utf-8")
         if not 1 <= len(encoded) <= 128:
             raise ValueError("API token must contain 1 to 128 UTF-8 bytes")
@@ -44,7 +44,7 @@ class CubeConnection:
         self.flags = 0
         self.stats = {}
         for negotiate in ([True, False] if modern else [False]):
-            self.sock = socket.create_connection((host, port), timeout=8)
+            self.sock = socket.create_connection((host, port), timeout=timeout)
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             try:
                 self.sock.sendall((b"GMC2" if negotiate else b"GMC1") + struct.pack("<H", len(encoded)) + encoded)

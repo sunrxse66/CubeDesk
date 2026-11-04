@@ -1,1 +1,2 @@
 Pillow>=12.3,<13
+pystray==0.19.5; sys_platform == 'win32'

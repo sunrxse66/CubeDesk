@@ -49,6 +49,21 @@ class LocalAppTests(unittest.TestCase):
             self.assertTrue(json.loads(data)['settings']['has_token'])
             mock.assert_not_called()
 
+    def test_background_preferences_require_csrf_and_pause_is_durable(self):
+        for path in ('/api/background/settings', '/api/background/resume'):
+            with self.subTest(path=path), self.assertRaises(urllib.error.HTTPError) as caught:
+                self.request(path, b'{}')
+            self.assertEqual(caught.exception.code, 403)
+        with self.post('/api/background/settings', {'resume_on_start': False}) as response:
+            self.assertFalse(json.load(response)['resume_on_start'])
+        with self.assertRaises(urllib.error.HTTPError):
+            self.post('/api/background/settings', {'resume_on_start': 'false'})
+        with self.post('/api/stop', {}):
+            pass
+        reloaded = AppState(Path(self.temp.name))
+        self.assertTrue(reloaded.memory.paused)
+        self.assertFalse(reloaded.memory.enabled)
+
     def test_updates_are_local_on_poll_and_require_csrf_for_install(self):
         with patch('cubedesk.updates.read_json') as network:
             with self.request('/api/updates') as response:

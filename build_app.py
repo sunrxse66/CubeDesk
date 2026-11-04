@@ -27,6 +27,7 @@ def main():
                     '--name', 'CubeDesk', '--icon', str(assets / 'cube.ico'),
                     '--distpath', str(args.dist_dir.resolve()), '--workpath', str(ROOT / '.tools/app-build'),
                     '--specpath', str(ROOT / '.tools'), '--paths', str(ROOT),
+                    '--hidden-import', 'pystray._win32',
                     '--add-data', str(ROOT / 'web') + ';web',
                     '--add-data', str(ROOT / 'cubedesk/resources') + ';cubedesk/resources',
                     '--exclude-module', 'PySide6', '--exclude-module', 'PyQt5',

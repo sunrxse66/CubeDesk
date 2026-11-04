@@ -13,13 +13,14 @@ from pathlib import Path
 import secrets
 import sys
 import threading
+import time
 import urllib.parse
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from PIL import Image, ImageOps
-from cube_player import SUPPORTED
+from cube_player import SUPPORTED, CubeConnection
 from smooth_player import play
 from cubedesk.device import Device, validate_host
 from cubedesk.weather import WeatherService, validate_city
@@ -28,6 +29,7 @@ from cubedesk.pet import PetState, play_pet, validate_character
 from cubedesk.findings import PhotoFindings, pick_photo_folder
 from cubedesk import VERSION
 from cubedesk.updates import UpdateService, flash_firmware
+from cubedesk.background import PlaybackMemory, WindowsStartup, ProfileLock
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "web"
@@ -52,8 +54,6 @@ class AppState:
                     if key in loaded:
                         self.config[key] = loaded[key]
                 if self.config['host']: validate_host(self.config["host"])
-                if not Path(self.config["folder"]).is_dir():
-                    self.config["folder"] = str(self.imports)
             except (OSError, ValueError, TypeError):
                 self.config.update(host="", folder=str(self.imports), token="")
         try:
@@ -74,6 +74,9 @@ class AppState:
         self.stop = threading.Event()
         self.worker = None
         self.playback = {}
+        self.memory = PlaybackMemory(storage)
+        self.startup = WindowsStartup()
+        self._restoring = False
         self.csrf = secrets.token_urlsafe(32)
         self.save()
 
@@ -95,6 +98,7 @@ class AppState:
                     "job": self.job.copy(), "playback": self.playback.copy(),
                     "pet": self.pet.status() | {'active': self.job['running'] and self.job.get('scope') == 'pet'},
                     "findings": self.findings.public(),
+                    "background": self.memory.public() | self.startup.public(),
                     "events": list(self.events), "version": VERSION}
 
     def _validated_settings(self, data):
@@ -107,7 +111,7 @@ class AppState:
             if updated['detail'] not in ('smooth', 'balanced', 'sharp'):
                 raise ValueError('Выберите режим «Плавно», «Баланс» или «Чётко»')
             folder = Path(str(updated["folder"])).expanduser()
-            if not folder.is_dir():
+            if 'folder' in data and not folder.is_dir():
                 raise ValueError("Папка не найдена на этом компьютере. Вставьте полный путь из Проводника.")
             updated["folder"] = str(folder.resolve())
             for key, maximum in [("fps", 30), ("seconds", 86400)]:
@@ -125,6 +129,9 @@ class AppState:
             if self.job["running"]:
                 raise ValueError("Сначала остановите текущую операцию")
             updated = self._validated_settings(data)
+            if any(updated[key] != self.config[key] for key in ('host', 'token', 'folder')):
+                self.memory.paused = True
+                self.memory.save()
             if updated["host"] != self.config["host"] or updated["token"] != self.config["token"]:
                 self.device = {"kind": "unknown", "host": updated["host"]}
             self.config = updated
@@ -172,15 +179,26 @@ class AppState:
             self._begin(kind, action, metadata)
 
     def _begin(self, kind, action, metadata):
+        selected_path = metadata.pop('_file_path', None)
+        restoring = self._restoring and kind == 'stream'
         with self.lock:
             if self.job["running"]:
                 raise ValueError("Дождитесь завершения текущей операции")
+            config = self.config.copy()
+            if kind == 'stream':
+                selection = {key: metadata[key] for key in ('scope', 'widget', 'file_id') if key in metadata}
+                selection.update(folder=config['folder'], file_path=selected_path,
+                                 device={key: self.device[key] for key in ('kind', 'host', 'version', 'model') if key in self.device})
+                self.memory.remember(selection)
             self.stop.clear()
             self.job = {"running": True, "kind": kind, "message": "Подождите…", "error": False, **metadata}
-            config = self.config.copy()
+            if kind == 'stream':
+                self.job['restoring'] = restoring
 
         def run():
             try:
+                if restoring and not self._wait_for_resume(config, selection):
+                    return
                 action(config)
             except Exception as error:
                 self.log(str(error))
@@ -210,7 +228,7 @@ class AppState:
     def _stream(self, selected_file, selected_id, options):
         if self.device.get("kind") != "stream":
             raise ValueError("Потоковое воспроизведение требует PCStream. На штатной прошивке используйте кнопку «Показать» на файле.")
-        if not self.library()["items"]:
+        if not self._restoring and not self.library()["items"]:
             raise ValueError("Сначала добавьте изображения или подключите папку")
         options = {key: options[key] for key in ('fps', 'seconds', 'detail') if key in options}
         updated = self._validated_settings(options)
@@ -232,7 +250,102 @@ class AppState:
                  report=report, fps=config["fps"], seconds=config["seconds"], on_stats=stats,
                  detail=config['detail'], selected_file=selected_file)
             self.log("Воспроизведение остановлено. Последний кадр остаётся на кубике.")
-        self.begin("stream", action, scope='file' if selected_file is not None else 'folder', file_id=selected_id)
+        self.begin("stream", action, scope='file' if selected_file is not None else 'folder', file_id=selected_id,
+                   _file_path=str(selected_file.resolve()) if selected_file is not None else None)
+
+    def pause(self):
+        with self.control, self.lock:
+            self.memory.paused = True
+            self.memory.save()
+            self.stop.set()
+
+    def background_settings(self, data):
+        for key in ('startup_enabled', 'resume_on_start'):
+            if key in data and not isinstance(data[key], bool):
+                raise ValueError('Настройка должна быть включена или выключена')
+        with self.control, self.lock:
+            if 'startup_enabled' in data:
+                self.startup.set(data['startup_enabled'])
+            if 'resume_on_start' in data:
+                self.memory.enabled = data['resume_on_start']
+                self.memory.save()
+                if not self.memory.enabled and self.job.get('restoring'):
+                    self.stop.set()
+        return self.public()['background']
+
+    def _wait_for_resume(self, config, selection):
+        previous = None
+        while not self.stop.is_set():
+            message = 'Ожидаю кубик и домашнюю сеть…'
+            scope = selection['scope']
+            folder = Path(config['folder'])
+            media_wait = None
+            try:
+                if scope in ('file', 'folder') and not folder.is_dir():
+                    media_wait = 'Ожидаю папку медиатеки. Подключите диск или выберите другую папку.'
+                elif scope == 'file' and not Path(selection['file_path']).is_file():
+                    media_wait = 'Ожидаю выбранный файл. Верните его в медиатеку или выберите другой.'
+                elif scope == 'folder' and not any(p.is_file() and p.suffix.lower() in SUPPORTED for p in folder.iterdir()):
+                    media_wait = 'Ожидаю изображения в медиатеке…'
+            except OSError:
+                media_wait = 'Ожидаю доступ к диску с медиатекой…'
+            if media_wait is None:
+                try:
+                    connection = CubeConnection(config['host'], config['token'], modern=True, timeout=2)
+                    try:
+                        connection.send()
+                    finally:
+                        connection.close()
+                    if self.stop.is_set():
+                        return False
+                    with self.lock:
+                        self.device = dict(selection['device'])
+                        self.job['restoring'] = False
+                    self.log('Возвращаю последний показ на кубик')
+                    return True
+                except (OSError, ValueError):
+                    pass
+            else:
+                message = media_wait
+            if message != previous:
+                self.log(message)
+                previous = message
+            if self.stop.wait(3):
+                return False
+        return False
+
+    def resume_last(self, automatic=False):
+        with self.control:
+            with self.lock:
+                if automatic and (not self.memory.enabled or self.memory.paused or self.job['running']):
+                    return False
+                scene = self.memory.selection
+                if not scene:
+                    if automatic:
+                        return False
+                    raise ValueError('Сначала выберите файл, медиатеку, виджет или питомца')
+                if not self.config['host'] or not self.config['token']:
+                    raise ValueError('Сначала сохраните адрес и API-токен кубика')
+                if scene.get('folder') != self.config['folder']:
+                    raise ValueError('Медиатека изменилась. Выберите, что показать на кубике.')
+                device = scene.get('device', {})
+                if device.get('kind') != 'stream' or device.get('host') != self.config['host']:
+                    raise ValueError('Выберите показ для текущего кубика')
+                scope = scene['scope']
+                path = Path(scene.get('file_path') or '') if scope == 'file' else None
+                if path is not None and (path.parent.resolve() != Path(self.config['folder']).resolve() or path.suffix.lower() not in SUPPORTED):
+                    raise ValueError('Сохранённый файл не находится в текущей медиатеке')
+            self._stop_stream()
+            with self.lock:
+                self.device = dict(device)
+            self._restoring = True
+            try:
+                if scope == 'widget': self.widget(scene.get('widget'))
+                elif scope == 'pet': self.show_pet()
+                else: self.stream(path, scene.get('file_id'))
+            finally:
+                self._restoring = False
+            return True
 
     def _stop_stream(self):
         with self.lock:
@@ -528,6 +641,11 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == "/api/connect":
                 app.connect()
                 result = {"ok": True}
+            elif url.path == '/api/background/settings':
+                result = app.background_settings(data)
+            elif url.path == '/api/background/resume':
+                app.resume_last()
+                result = {'ok': True}
             elif url.path == "/api/play":
                 app.stream(options=data)
                 result = {"ok": True}
@@ -595,7 +713,7 @@ class Handler(BaseHTTPRequestHandler):
                     app.begin('firmware', update_firmware)
                 result = {'ok': True}
             elif url.path == "/api/stop":
-                app.stop.set()
+                app.pause()
                 result = {"ok": True}
             elif url.path == "/api/shutdown":
                 if app.job['running'] and app.job['kind'] == 'firmware':
@@ -629,20 +747,50 @@ def existing_instance(port, storage):
         return False
 
 
+def running_port(preferred, storage):
+    ports = [preferred]
+    try:
+        port = json.loads((Path(storage) / 'instance.json').read_text('utf8')).get('port')
+        if isinstance(port, int) and 0 < port < 65536:
+            ports.insert(0, port)
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return next((port for port in dict.fromkeys(ports) if existing_instance(port, storage)), None)
+
+
 def main():
     parser = argparse.ArgumentParser(description="CubeDesk — локальное приложение для GeekMagic")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument('--background', action='store_true', help='Запустить в трее без открытия браузера')
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument('--update-health', default='', help=argparse.SUPPRESS)
     args = parser.parse_args()
-    storage = args.data_dir or Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "CubeDesk"
-    if not args.update_health and existing_instance(args.port, storage):
-        if not args.no_browser:
-            webbrowser.open(f'http://127.0.0.1:{args.port}')
+    default_storage = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "CubeDesk"
+    storage = args.data_dir or default_storage
+    quiet = args.no_browser or args.background
+    port = running_port(args.port, storage)
+    if not args.update_health and port:
+        if not quiet:
+            webbrowser.open(f'http://127.0.0.1:{port}')
         return
+    ownership = ProfileLock(storage)
+    deadline = time.monotonic() + (10 if args.update_health else 5)
+    while not ownership.acquire():
+        if not args.update_health:
+            port = running_port(args.port, storage)
+            if port:
+                if not quiet: webbrowser.open(f'http://127.0.0.1:{port}')
+                return
+        if time.monotonic() >= deadline:
+            raise RuntimeError('CubeDesk уже запускается для этой папки настроек')
+        time.sleep(.2)
     migrate = (Path(sys.executable).parent if getattr(sys, "frozen", False) else ROOT) / "cube-local.json"
     app = AppState(storage, migrate)
+    app.startup = WindowsStartup(supported=os.name == 'nt' and bool(getattr(sys, 'frozen', False)) and storage.resolve() == default_storage.resolve())
+    if app.startup.enabled():
+        try: app.startup.set(True)  # Refresh a moved portable executable's path.
+        except (OSError, ValueError) as error: app.log('Автозапуск: ' + str(error))
     try:
         server = Server(("127.0.0.1", args.port), app)
     except OSError:
@@ -651,36 +799,43 @@ def main():
         # Do not navigate to an unknown service occupying the preferred port.
         server = Server(("127.0.0.1", 0), app)
     server.update_nonce = args.update_health
+    ownership.publish(server.server_port)
     app.updates.start_polling()
     resume_path = storage / 'update-resume.json'
     if resume_path.is_file():
         try:
             resume = json.loads(resume_path.read_text('utf8'))
             resume_path.unlink()
-            def restore():
-                try:
-                    result = Device(app.config['host'], app.config['token']).inspect()
-                    with app.lock:
-                        app.device = result
-                    if resume.get('scope') == 'widget': app.widget(resume.get('widget'))
-                    elif resume.get('scope') == 'pet': app.show_pet()
-                    elif resume.get('scope') == 'file':
-                        app.library()
-                        ident = resume.get('file_id')
-                        app.stream(app.file(ident), ident)
-                    elif resume.get('scope') == 'folder': app.stream()
-                except Exception as error:
-                    app.log('Автовозврат к воспроизведению: ' + str(error))
-            if resume:
-                threading.Thread(target=restore, daemon=True).start()
+            if resume and not app.memory.selection:
+                # Migrate the previous version's one-shot updater hand-off.
+                path = None
+                if resume.get('scope') == 'file':
+                    app.library()
+                    path = app.file(resume.get('file_id'))
+                app.memory.remember(resume | {'folder': app.config['folder'],
+                    'file_path': str(path) if path else None,
+                    'device': {'kind': 'stream', 'host': app.config['host'], 'model': 'HelloCubic-Lite', 'version': 'PCStream'}})
         except (OSError, ValueError, TypeError):
             pass
+    try:
+        app.resume_last(automatic=True)
+    except (OSError, ValueError, TypeError) as error:
+        app.log('Автовозврат к воспроизведению: ' + str(error))
     url = f"http://127.0.0.1:{server.server_port}"
     try:
         print("CubeDesk:", url, flush=True)
     except (AttributeError, OSError):
         pass  # Windowless packaged .exe has no console.
-    if not args.no_browser:
+    tray = None
+    if os.name == 'nt' and getattr(sys, 'frozen', False):
+        try:
+            from cubedesk.tray import Tray
+            tray = Tray(app, server, url)
+            tray.start()
+        except Exception as error:
+            app.log('Значок в трее: ' + str(error))
+            quiet = False  # Keep a way to control a background launch if tray setup fails.
+    if not quiet:
         webbrowser.open(url)
     try:
         server.serve_forever(poll_interval=.25)
@@ -689,7 +844,10 @@ def main():
     finally:
         app.stop.set()
         app.updates.shutdown.set()
+        if tray:
+            tray.stop()
         server.server_close()
+        ownership.close()
 
 
 if __name__ == "__main__":
