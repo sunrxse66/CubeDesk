@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Minimal setup page in program flash; no filesystem image is required.
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <user_interface.h>
 #include "web/Api.h"
 #include "config/ConfigManager.h"
@@ -26,14 +27,63 @@ String escaped(String text) {
     return text;
 }
 
-void sendPage(Webserver* webserver, const String& content, int code = 200) {
-    String page(FPSTR(PAGE));
-    page.replace("%VERSION%", PROJECT_VER_STR);
-    page.replace("%CONTENT%", content);
+const char* flashMarker(const char* text, const char* marker) {
+    const size_t count = strlen(marker);
+    for (; pgm_read_byte(text); ++text) {
+        if (strncmp_P(marker, text, count) == 0) return text;
+    }
+    return nullptr;  // All callers use markers present in static templates.
+}
+
+void sendPageStart(Webserver* webserver, size_t contentBytes, int code = 200) {
+    const char* version = flashMarker(PAGE, "%VERSION%");
+    const char* content = flashMarker(PAGE, "%CONTENT%");
+    auto& server = webserver->raw();
+    // Captive-network probes open several sockets. Do not hold the only HTTP
+    // handler waiting on an idle phone connection between small responses.
+    server.keepAlive(false);
+    server.client().setNoDelay(true);
+    // Synchronous writes avoid accumulating TCP_SND_BUF copies while the
+    // phone acknowledges successive pieces of the page.
+    server.client().setSync(true);
+    const size_t total = strlen_P(PAGE) - strlen("%VERSION%") - strlen("%CONTENT%") +
+                         strlen(PROJECT_VER_STR) + contentBytes;
     webserver->raw().sendHeader("Cache-Control", "no-store");
     webserver->raw().sendHeader("X-Content-Type-Options", "nosniff");
     webserver->raw().sendHeader("Referrer-Policy", "no-referrer");
-    webserver->raw().send(code, "text/html; charset=utf-8", page);
+    server.setContentLength(total);
+    server.send(code, "text/html; charset=utf-8", "");
+    server.sendContent_P(PAGE, version - PAGE);
+    server.sendContent(PROJECT_VER_STR);
+    const char* afterVersion = version + strlen("%VERSION%");
+    server.sendContent_P(afterVersion, content - afterVersion);
+}
+
+void sendPageEnd(Webserver* webserver) {
+    webserver->raw().sendContent_P(flashMarker(PAGE, "%CONTENT%") + strlen("%CONTENT%"));
+}
+
+void sendPage(Webserver* webserver, const String& content, int code = 200) {
+    sendPageStart(webserver, content.length(), code);
+    webserver->raw().sendContent(content);
+    sendPageEnd(webserver);
+}
+
+void sendSetupForm(Webserver* webserver) {
+    const String ssid = escaped(configManager.getSSID());
+    const char* ssidAt = flashMarker(FORM, "%SSID%");
+    const char* nonceAt = flashMarker(FORM, "%NONCE%");
+    const size_t bytes = strlen_P(FORM) - strlen("%SSID%") - strlen("%NONCE%") +
+                         ssid.length() + setupNonce.length();
+    sendPageStart(webserver, bytes);
+    auto& server = webserver->raw();
+    server.sendContent_P(FORM, ssidAt - FORM);
+    server.sendContent(ssid);
+    const char* afterSsid = ssidAt + strlen("%SSID%");
+    server.sendContent_P(afterSsid, nonceAt - afterSsid);
+    server.sendContent(setupNonce);
+    server.sendContent_P(nonceAt + strlen("%NONCE%"));
+    sendPageEnd(webserver);
 }
 
 bool setupClient(Webserver* webserver) {
@@ -69,10 +119,7 @@ void handleSetupPage(Webserver* webserver) {
         snprintf(nonce, sizeof(nonce), "%08lx%08lx%08lx%08lx", os_random(), os_random(), os_random(), os_random());
         setupNonce = nonce;
     }
-    String content(FPSTR(FORM));
-    content.replace("%NONCE%", setupNonce);
-    content.replace("%SSID%", escaped(configManager.getSSID()));
-    sendPage(webserver, content);
+    sendSetupForm(webserver);
 }
 
 void handleSetupWifi(Webserver* webserver) {
@@ -102,6 +149,7 @@ void handleSetupWifi(Webserver* webserver) {
 }
 
 void handleSetupNetworks(Webserver* webserver) {
+    webserver->raw().keepAlive(false);
     if (!setupClient(webserver)) {
         webserver->raw().send(403, "application/json", "[]");
         return;
@@ -116,6 +164,7 @@ void handleSetupNetworks(Webserver* webserver) {
         if (!duplicate) names.add(name);
     }
     WiFi.scanDelete();
+    wifiManager->keepUnconfiguredAccessPoint();
     String body;
     serializeJson(result, body);
     webserver->raw().sendHeader("Cache-Control", "no-store");
@@ -124,6 +173,9 @@ void handleSetupNetworks(Webserver* webserver) {
 
 bool handleCaptivePortal(Webserver* webserver) {
     if (!setupClient(webserver) || webserver->raw().method() != HTTP_GET || webserver->raw().uri().startsWith("/api/")) return false;
+    webserver->raw().keepAlive(false);
+    webserver->raw().client().setNoDelay(true);
+    webserver->raw().client().setSync(true);
     webserver->raw().sendHeader("Location", "http://192.168.4.1/setup", true);
     webserver->raw().sendHeader("Cache-Control", "no-store");
     webserver->raw().send(302, "text/plain", "Open CubeDesk setup");

@@ -197,6 +197,14 @@ void setup() {
 
     registerApiEndpoints(webserver);
     PCStream::begin();
+    // Both the embedded and legacy OTA routes use this updater. Release the
+    // frame buffer and stop accepting streams for the duration of a write.
+    Update.onStart([]() {
+        PCStream::networkChanged(false);
+        DisplayManager::stopGif();
+    });
+    Update.onEnd([]() { PCStream::networkChanged(wifiManager && wifiManager->servicesReady()); });
+    Update.onError([](uint8_t) { PCStream::networkChanged(wifiManager && wifiManager->servicesReady()); });
 
     if (!littleFsReadyForStatic
 #ifdef PCSTREAM_STREAMING

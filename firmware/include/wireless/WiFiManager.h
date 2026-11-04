@@ -41,8 +41,8 @@ class WiFiManager {
     static String getConnectedSSID();
     bool takeServiceChange();
     bool servicesReady() const;
-    bool scheduleRecoveryTest(uint32_t offlineMs);
-    void addDiagnostics(JsonObject result) const;
+    void keepUnconfiguredAccessPoint();
+    void addStatus(JsonObject result) const;
     void showStatus();
 
    private:
@@ -60,15 +60,23 @@ class WiFiManager {
     uint32_t _nextAttemptAt = 0;
     uint32_t _attempts = 0;
     uint32_t _fallbackCount = 0;
-    uint32_t _testDropAt = 0;
-    uint32_t _testResumeAt = 0;
-    uint32_t _testOfflineMs = 0;
     uint8_t _lastDisconnectReason = 0;
     WiFiEventHandler _disconnectedHandler;
     WiFiEventHandler _gotIpHandler;
     DNSServer _dns;
     uint32_t _phoneJoinedAt = 0;
     bool _pageQrShown = false;
+    bool _setupRetryPaused = false;
+    uint32_t _resumeAfterSetupAt = 0;
+    uint32_t _setupPauseUntil = 0;
+    uint32_t _setupPauseAllowedAt = 0;
+    uint8_t _lastStationFailureReason = 0;
+    bool _recoveryScanActive = false;
+    uint32_t _recoveryScanDeadline = 0;
+    void connectStation(int32_t channel = 0, const uint8_t* bssid = nullptr);
+    void finishRecoveryScan();
+    void enterUnconfiguredMode();
+    void pauseStationForSetup();
 };
 
 #endif  // WIFI_MANAGER_H

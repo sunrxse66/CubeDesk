@@ -81,7 +81,6 @@ void registerApiEndpoints(Webserver* webserver) {
     // @openapi {get} /wifi/status version=v1 group=WiFi summary="Get WiFi connection status" requiresAuth=true
     // responses=200:application/json,401:application/json
     webserver->raw().on("/api/v1/wifi/status", HTTP_GET, [webserver]() { handleWifiStatus(webserver); });
-    webserver->raw().on("/api/v1/wifi/recovery-test", HTTP_POST, [webserver]() { handleWifiRecoveryTest(webserver); });
 
     // @openapi {post} /ntp/sync version=v1 group=NTP summary="Trigger NTP sync" requiresAuth=true
     // responses=200:application/json,401:application/json
@@ -1259,6 +1258,7 @@ void handleWifiScan(Webserver* webserver) {
 
     if (wifiManager != nullptr) {
         WiFiManager::scanNetworks(networks);
+        wifiManager->keepUnconfiguredAccessPoint();
     }
 
     String out;
@@ -1356,7 +1356,7 @@ void handleWifiStatus(Webserver* webserver) {
     resp["connected"] = connected;
     resp["ssid"] = connected ? WiFiManager::getConnectedSSID() : "";
     resp["ip"] = connected ? wifiManager->getIP().toString() : "";
-    if (wifiManager) wifiManager->addDiagnostics(resp.as<JsonObject>());
+    if (wifiManager) wifiManager->addStatus(resp.as<JsonObject>());
     resp["loaded_saved_network"] = wifiLoadedFromStorage;
     resp["stored_ssid_matches"] = configManager.secure.get("wifi_ssid", "") == configManager.getSSID();
     resp["stored_password_matches"] = configManager.secure.get("wifi_password", "") == configManager.getPassword();
@@ -1367,25 +1367,6 @@ void handleWifiStatus(Webserver* webserver) {
 
     setCorsHeaders(webserver);
     webserver->raw().send(HTTP_CODE_OK, "application/json", jsonOut);
-}
-
-/**
- * @brief Handle OTA start
- *
- * @param upload Reference to the HTTPUpload object
- * @param mode Update mode U_FLASH or U_FS
- *
- * @return void
- */
-void handleWifiRecoveryTest(Webserver* webserver) {
-    if (!requireBearerToken(webserver)) return;
-    JsonDocument request;
-    const auto error = deserializeJson(request, webserver->raw().arg("plain"));
-    const uint32_t offlineMs = request["offline_ms"] | 20000u;
-    const bool accepted = !error && wifiManager && wifiManager->scheduleRecoveryTest(offlineMs);
-    setCorsHeaders(webserver);
-    webserver->raw().send(accepted ? 200 : 400, "application/json",
-                         accepted ? "{\"status\":\"scheduled\"}" : "{\"status\":\"invalid or busy\"}");
 }
 
 static void otaHandleStart(HTTPUpload& upload, int mode) {

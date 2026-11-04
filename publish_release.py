@@ -3,11 +3,25 @@ import json
 from pathlib import Path
 import subprocess
 import os
+import re
 from cubedesk import VERSION, REPOSITORY
 
 
 def gh(*arguments, check=True):
     return subprocess.run(['gh', *arguments], check=check, capture_output=True, text=True, encoding='utf8')
+
+
+def release_notes(changelog, version):
+    """Publish this version's changes; keep the historical changelog in the repo."""
+    headings = list(re.finditer(r'^## CubeDesk (\d+\.\d+\.\d+)(?:[^\n]*)$', changelog, re.MULTILINE))
+    for index, heading in enumerate(headings):
+        if heading.group(1) == version:
+            end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
+            notes = changelog[heading.end():end].strip()
+            if notes:
+                return notes + '\n'
+            break
+    raise ValueError('Missing release notes for CubeDesk ' + version)
 
 
 def main():
@@ -22,9 +36,14 @@ def main():
         if not current['isDraft'] and any(a['name'] == 'update.json' for a in current['assets']):
             print('Published release already has its update manifest; assets will not be overwritten.')
             return
-    else:
+    notes = Path('.tools') / ('release-notes-' + VERSION + '.md')
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text(release_notes(Path('CHANGELOG.md').read_text('utf8'), VERSION), 'utf8')
+    if existing.returncode != 0:
         gh('release','create',tag,'--repo',REPOSITORY,'--draft','--target',head,
-           '--title','CubeDesk '+VERSION+' · Windows + PCStream', '--notes-file','CHANGELOG.md')
+           '--title','CubeDesk '+VERSION+' · Windows + PCStream', '--notes-file',str(notes))
+    else:
+        gh('release','edit',tag,'--repo',REPOSITORY,'--notes-file',str(notes))
     directory = Path('dist/release')
     allowed = {'CubeDesk.exe','CubeDesk-Windows.zip','HelloCubic-PCStream-universal.bin','update.json',
                'QUICKSTART.txt','LICENSE','THIRD_PARTY.md','SHA256SUMS.txt'}

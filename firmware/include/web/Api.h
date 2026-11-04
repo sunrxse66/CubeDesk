@@ -21,6 +21,7 @@
 #define API_H
 
 #include "web/Webserver.h"
+#include <ArduinoJson.h>
 
 void setCorsHeaders(Webserver* webserver);
 void registerApiEndpoints(Webserver* webserver);
@@ -38,7 +39,6 @@ void handleStopGif(Webserver* webserver);
 void handleWifiScan(Webserver* webserver);
 void handleWifiConnect(Webserver* webserver);
 void handleWifiStatus(Webserver* webserver);
-void handleWifiRecoveryTest(Webserver* webserver);
 void handleSetupPage(Webserver* webserver);
 void handleSetupWifi(Webserver* webserver);
 void handleSetupNetworks(Webserver* webserver);

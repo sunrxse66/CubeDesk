@@ -4,6 +4,7 @@
 #include "display/DisplayManager.h"
 #include "config/ConfigManager.h"
 #include <ESP8266WiFi.h>
+#include <Updater.h>
 #include <TJpg_Decoder.h>
 #include <algorithm>
 #include <cstring>
@@ -15,7 +16,10 @@ namespace {
 constexpr size_t STRIPE_ROWS = 4;
 constexpr size_t STRIPE_BYTES = 240 * 2 * STRIPE_ROWS;
 constexpr uint32_t FRAME_BYTES = 240 * 240 * 2;
-constexpr uint32_t JPEG_LIMIT = 16384;
+// Keep headroom for lwIP, HTTP and Wi-Fi reconnects while a player is open.
+// The sender already adapts JPEG quality to this negotiated capacity.
+constexpr uint32_t JPEG_LIMIT = 8192;
+constexpr uint32_t HEAP_RESERVE = 8192;
 constexpr uint32_t IDLE_TIMEOUT_MS = 15000;
 WiFiServer server(7777);
 WiFiClient client;
@@ -124,6 +128,7 @@ void PCStream::networkChanged(bool ready) {
     if (ready) server.begin();
 }
 void PCStream::update() {
+    if (Update.isRunning()) return;
     if (!client.connected()) {
         closeClient(); client = server.accept();
         if (!client) return;
@@ -152,7 +157,10 @@ void PCStream::update() {
             DisplayManager::stopGif();
             if (modern) {
                 const uint32_t heap = ESP.getFreeHeap();
-                jpegCapacity = heap > 12288 ? std::min(JPEG_LIMIT, ((heap - 8192) / 1024) * 1024) : 0;
+                const uint32_t block = ESP.getMaxFreeBlockSize();
+                jpegCapacity = heap >= HEAP_RESERVE + 4096 && block >= 8192
+                    ? std::min(JPEG_LIMIT, std::min(((heap - HEAP_RESERVE) / 1024) * 1024,
+                                                   ((block - 4096) / 1024) * 1024)) : 0;
                 if (jpegCapacity >= 4096) jpeg.reset(new (std::nothrow) uint8_t[jpegCapacity]);
                 if (!jpeg) jpegCapacity = 0;
                 uint8_t caps[12] = {'O','K','J','2'};
