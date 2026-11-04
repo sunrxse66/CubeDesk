@@ -69,6 +69,7 @@ class FirstInstallTests(unittest.TestCase):
 
     def ready(self):
         self.service.probe('127.0.0.1')
+        self.probe_check_id = self.service.public()['check_id']
         updates = SimpleNamespace(check=lambda: None, worker=None, specs={'firmware': self.spec},
             public=lambda: {'busy': False}, download=lambda kind: None, prepared=lambda kind: (self.path, self.spec))
         self.service.prepare(updates)
@@ -78,7 +79,8 @@ class FirstInstallTests(unittest.TestCase):
         confirmation = self.ready()
         self.assertEqual(self.service.public()['phase'], 'ready')
         self.assertEqual(self.server.posts, [])
-        for bad in ({}, {'confirmed': 'true'}, {'confirmed': True, 'check_id': 'stale'}):
+        for bad in ({}, {'confirmed': 'true'}, {'confirmed': True, 'check_id': 'stale'},
+                    {'confirmed': True, 'check_id': self.probe_check_id}):
             with self.assertRaises(ValueError): self.service.install(bad)
         self.assertEqual(self.server.posts, [])
         self.service.install(confirmation)

@@ -540,19 +540,31 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass  # Do not log tokens, file paths, or raw request bodies.
 
+    def reject(self):
+        # Closing a Windows socket with unread POST bytes can reset the client
+        # before it receives HTTP 403. Drain only a small, bounded request body.
+        self.close_connection = True
+        if self.command == 'POST':
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if 0 < length <= 65536:
+                    self.connection.settimeout(.5)
+                    self.rfile.read(length)
+            except (OSError, ValueError):
+                pass
+        self.send_error(403)
+        return False
+
     def guard(self, mutation=False):
         allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
         if self.headers.get("Host") not in allowed:
-            self.send_error(403)
-            return False
+            return self.reject()
         if mutation:
             origin = self.headers.get("Origin")
             if origin and origin not in {"http://" + host for host in allowed}:
-                self.send_error(403)
-                return False
+                return self.reject()
             if not secrets.compare_digest(self.headers.get("X-CubeDesk-Key", ""), self.server.app.csrf):
-                self.send_error(403)
-                return False
+                return self.reject()
         return True
 
     def reply(self, data, content_type="application/json; charset=utf-8", status=200):

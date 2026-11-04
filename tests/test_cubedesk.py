@@ -66,9 +66,12 @@ class LocalAppTests(unittest.TestCase):
 
     def test_first_install_actions_require_csrf_and_a_checked_prepared_device(self):
         for path in ('probe', 'prepare', 'install', 'pair', 'reset'):
-            with self.subTest(path=path), self.assertRaises(urllib.error.HTTPError) as caught:
-                self.request('/api/setup/' + path, b'{}')
-            self.assertEqual(caught.exception.code, 403)
+            with self.subTest(path=path):
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    self.request('/api/setup/' + path, b'{}')
+                self.assertEqual(caught.exception.code, 403)
+                caught.exception.read()
+                caught.exception.close()
         for data in ({}, {'confirmed': True, 'check_id': 'not-checked'}):
             with self.assertRaises(urllib.error.HTTPError):
                 self.post('/api/setup/install', data)

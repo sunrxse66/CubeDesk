@@ -161,8 +161,9 @@ class FirstInstall:
         if updates.worker: updates.worker.join(650)
         path, spec = updates.prepared('firmware')
         self.validate_image(path, spec)
-        self.prepared = (path, spec)
+        self.prepared = (path, spec.copy())
         self.set(phase='ready', firmware={'version': spec['version'], 'size': spec['size']}, progress=100,
+                 check_id=secrets.token_urlsafe(24),
                  message='Прошивка загружена, размер и SHA-256 проверены. Теперь можно подтвердить установку.')
 
     @staticmethod
