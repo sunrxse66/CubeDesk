@@ -30,6 +30,8 @@ from cubedesk.findings import PhotoFindings, pick_photo_folder
 from cubedesk import VERSION
 from cubedesk.updates import UpdateService, flash_firmware
 from cubedesk.background import PlaybackMemory, WindowsStartup, ProfileLock
+from cubedesk.onboarding import FirstInstall, LocalTarget
+from cubedesk.updates import version_tuple
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "web"
@@ -75,6 +77,7 @@ class AppState:
         self.worker = None
         self.playback = {}
         self.memory = PlaybackMemory(storage)
+        self.onboarding = FirstInstall(storage)
         self.startup = WindowsStartup()
         self._restoring = False
         self.csrf = secrets.token_urlsafe(32)
@@ -99,6 +102,7 @@ class AppState:
                     "pet": self.pet.status() | {'active': self.job['running'] and self.job.get('scope') == 'pet'},
                     "findings": self.findings.public(),
                     "background": self.memory.public() | self.startup.public(),
+                    "onboarding": self.onboarding.public(),
                     "events": list(self.events), "version": VERSION}
 
     def _validated_settings(self, data):
@@ -258,6 +262,47 @@ class AppState:
             self.memory.paused = True
             self.memory.save()
             self.stop.set()
+
+    def setup_action(self, action, kind='setup'):
+        with self.control:
+            self._stop_stream()
+            with self.lock:
+                self.memory.paused = True
+                self.memory.save()
+            def run(config):
+                try:
+                    action(config)
+                    self.log(self.onboarding.state['message'])
+                except Exception as error:
+                    self.onboarding.fail(error)
+                    raise
+            self.begin(kind, run)
+
+    def setup_pair(self, data):
+        host = validate_host(data.get('host', ''))
+        token = data.get('token', '')
+        if not isinstance(token, str):
+            raise ValueError('Введите ключ подключения со страницы настройки PCStream')
+        if not token and host == self.config['host']:
+            token = self.config['token']
+        self._validated_settings({'host': host, 'token': token})
+        def action(config):
+            if LocalTarget(host).probe()['kind'] != 'stream':
+                raise ValueError('По этому адресу пока не обнаружена PCStream. Проверьте экран кубика и завершите настройку Wi-Fi.')
+            info = Device(host, token).inspect()
+            if info.get('kind') != 'stream':
+                raise ValueError('Ключ не подошёл. Скопируйте API-токен со страницы настройки PCStream.')
+            expected = (self.onboarding.state.get('firmware') or {}).get('version')
+            if expected and version_tuple(info['version']) < version_tuple(expected):
+                raise ValueError('Кубик ещё не подтвердил установку выбранной версии PCStream')
+            with self.lock:
+                self.config = self._validated_settings({'host': host, 'token': token})
+                self.save()
+                self.device = info
+            self.onboarding.set(phase='complete', host=host, device=info, progress=100,
+                                message='Кубик подключён. Адрес и ключ сохранены на этом ПК.')
+            self.log('Первый запуск завершён. Можно выбирать GIF или виджеты.')
+        self.setup_action(action)
 
     def background_settings(self, data):
         for key in ('startup_enabled', 'resume_on_start'):
@@ -582,7 +627,7 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path in ("/", "/index.html"):
                 data = (ASSETS / "index.html").read_text("utf-8").replace("__CSRF__", app.csrf).replace('__VERSION__', VERSION)
                 self.reply(data.encode(), "text/html; charset=utf-8")
-            elif url.path in ("/app.js", "/widgets.js", "/pet.js", "/updates.js", "/style.css", "/findings.css", "/cube.svg"):
+            elif url.path in ("/app.js", "/widgets.js", "/pet.js", "/updates.js", "/onboarding.js", "/style.css", "/findings.css", "/onboarding.css", "/cube.svg"):
                 path = ASSETS / url.path[1:]
                 self.reply(path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
             elif url.path == "/favicon.ico":
@@ -643,6 +688,29 @@ class Handler(BaseHTTPRequestHandler):
                 result = {"ok": True}
             elif url.path == '/api/background/settings':
                 result = app.background_settings(data)
+            elif url.path == '/api/setup/probe':
+                host = validate_host(data.get('host', ''))
+                app.setup_action(lambda config: app.onboarding.probe(host))
+                result = {'ok': True}
+            elif url.path == '/api/setup/prepare':
+                if app.onboarding.state['phase'] not in ('compatible', 'ready'):
+                    raise ValueError('Сначала проверьте совместимый заводской кубик')
+                app.setup_action(lambda config: app.onboarding.prepare(app.updates))
+                result = {'ok': True}
+            elif url.path == '/api/setup/install':
+                with app.control:
+                    app.onboarding.validate_confirmation(data)
+                    app.setup_action(lambda config: app.onboarding.install(data), kind='firmware')
+                result = {'ok': True}
+            elif url.path == '/api/setup/pair':
+                app.setup_pair(data)
+                result = {'ok': True}
+            elif url.path == '/api/setup/reset':
+                with app.control:
+                    if app.job['running'] and app.job['kind'] != 'stream':
+                        raise ValueError('Дождитесь завершения текущей операции')
+                    app.onboarding.reset_completed()
+                result = {'ok': True}
             elif url.path == '/api/background/resume':
                 app.resume_last()
                 result = {'ok': True}

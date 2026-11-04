@@ -64,6 +64,20 @@ class LocalAppTests(unittest.TestCase):
         self.assertTrue(reloaded.memory.paused)
         self.assertFalse(reloaded.memory.enabled)
 
+    def test_first_install_actions_require_csrf_and_a_checked_prepared_device(self):
+        for path in ('probe', 'prepare', 'install', 'pair', 'reset'):
+            with self.subTest(path=path), self.assertRaises(urllib.error.HTTPError) as caught:
+                self.request('/api/setup/' + path, b'{}')
+            self.assertEqual(caught.exception.code, 403)
+        for data in ({}, {'confirmed': True, 'check_id': 'not-checked'}):
+            with self.assertRaises(urllib.error.HTTPError):
+                self.post('/api/setup/install', data)
+        self.assertFalse(self.app.job['running'])
+        with self.request('/onboarding.js') as response:
+            self.assertEqual(response.status, 200)
+        with self.request('/onboarding.css') as response:
+            self.assertEqual(response.status, 200)
+
     def test_updates_are_local_on_poll_and_require_csrf_for_install(self):
         with patch('cubedesk.updates.read_json') as network:
             with self.request('/api/updates') as response:

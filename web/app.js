@@ -2,7 +2,7 @@
 const $ = selector => document.querySelector(selector);
 const key = $('meta[name="cubedesk-key"]').content;
 let state = null, library = [], importing = false, switching = false, previewId = null, toastTimer, previousJob = false, serverGone = false;
-const titles = {connect:'Подключим ваш кубик',library:'Ваша медиатека',widgets:'Виджеты для вашего кубика',background:'Кубик работает сам',guide:'Всё начинается с подключения',updates:'Всегда актуальный CubeDesk'};
+const titles = {connect:'Подключим ваш кубик',setup:'Настроим новый кубик',library:'Ваша медиатека',widgets:'Виджеты для вашего кубика',background:'Кубик работает сам',guide:'Всё начинается с подключения',updates:'Всегда актуальный CubeDesk'};
 let backgroundSaving = false;
 const bytes = size => size == null ? '—' : size < 1048576 ? `${Math.round(size / 1024)} КБ` : `${(size / 1048576).toFixed(1)} МБ`;
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -19,6 +19,7 @@ window.addEventListener('hashchange', () => page(location.hash.slice(1)));
 function renderState() {
   const {device:d,job:j} = state; const connected = ['stock','stream'].includes(d.kind);
   renderBackground();
+  if (typeof renderOnboarding === 'function') renderOnboarding();
   $('#exit-app').disabled = j.running && j.kind === 'firmware';
   const badge = $('#connection-badge'); badge.className = `status ${connected ? 'online' : d.kind === 'offline' ? 'offline' : ''} ${j.running ? 'busy' : ''}`;
   badge.replaceChildren(Object.assign(document.createElement('i'),{}),document.createTextNode(j.running ? (j.restoring ? 'Ожидаем кубик' : j.kind === 'stream' ? 'Воспроизводим' : 'Подождите…') : connected ? 'Кубик подключён' : 'Не подключён'));
@@ -147,5 +148,5 @@ document.addEventListener('drop',event => { event.preventDefault(); $('#drop-zon
 $('#play').addEventListener('click', async () => { if (switching) return; switching = true; renderState(); try { await api('/api/play',playbackOptions()); await refreshState(); } catch(error) { toast(error.message,true); } finally { switching = false; renderState(); } });
 $('#stop').addEventListener('click',async () => { try { await api('/api/stop',{}); toast('Останавливаем воспроизведение…'); } catch(error) { toast(error.message,true); } });
 $('#exit-app').addEventListener('click',async () => { if (!confirm('Завершить CubeDesk? Воспроизведение с ПК остановится.')) return; try { await api('/api/shutdown',{}); serverGone = true; $('#connection-badge').textContent = 'Приложение завершено'; document.querySelectorAll('button').forEach(button => button.disabled = true); toast('CubeDesk завершён. Эту вкладку можно закрыть.'); } catch(error) { toast(error.message,true); } });
-async function start() { try { state = await api('/api/state'); $('#host').value = state.settings.host; $('#fps').value = state.settings.fps; $('#seconds').value = state.settings.seconds; $('#detail').value = state.settings.detail || 'smooth'; renderState(); await refreshLibrary(); page(location.hash.slice(1) || 'connect'); } catch(error) { toast(error.message,true); } finally { const poll = async () => { await refreshState(); if (!serverGone) setTimeout(poll,1500); }; setTimeout(poll,1500); } }
+async function start() { try { state = await api('/api/state'); $('#host').value = state.settings.host; $('#fps').value = state.settings.fps; $('#seconds').value = state.settings.seconds; $('#detail').value = state.settings.detail || 'smooth'; renderState(); await refreshLibrary(); const needsSetup = !state.settings.host || ['uncertain','waiting_setup'].includes(state.onboarding?.phase); page(location.hash.slice(1) || (needsSetup ? 'setup' : 'connect')); } catch(error) { toast(error.message,true); } finally { const poll = async () => { await refreshState(); if (!serverGone) setTimeout(poll,1500); }; setTimeout(poll,1500); } }
 start();
