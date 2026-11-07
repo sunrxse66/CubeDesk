@@ -24,7 +24,10 @@ from cube_player import SUPPORTED, CubeConnection
 from smooth_player import play
 from cubedesk.device import Device, validate_host
 from cubedesk.weather import WeatherService, validate_city
-from cubedesk.widgets import KINDS, render as render_widget, play_widget
+from cubedesk.markets import DEFAULTS as MARKET_DEFAULTS, MarketService, validate_market
+from cubedesk.village import Village
+from cubedesk.village_art import render_village, village_poster
+from cubedesk.widgets import KINDS, render as render_widget, play_widget, save_market_animation
 from cubedesk.pet import PetState, play_pet, validate_character
 from cubedesk.findings import PhotoFindings, pick_photo_folder
 from cubedesk import VERSION
@@ -48,6 +51,7 @@ class AppState:
         self.lock = threading.RLock()
         self.control = threading.RLock()
         self.config = {"host": "", "token": "", "folder": str(self.imports), "fps": 30, "seconds": 5, "detail": "smooth", "widget_city": None, "pet_character":"moti"}
+        self.config['market'] = validate_market(MARKET_DEFAULTS)
         source = self.config_path if self.config_path.exists() else migrate
         if source and source.is_file():
             try:
@@ -63,6 +67,12 @@ class AppState:
         except ValueError:
             self.config['widget_city'] = None
         self.weather = WeatherService(storage)
+        try:
+            self.config['market'] = validate_market(self.config['market'])
+        except ValueError:
+            self.config['market'] = validate_market(MARKET_DEFAULTS)
+        self.markets = MarketService(storage)
+        self.village = Village(storage)
         try:self.config['pet_character']=validate_character(self.config['pet_character'])
         except ValueError:self.config['pet_character']='moti'
         self.pet = PetState(character=self.config['pet_character'])
@@ -101,6 +111,7 @@ class AppState:
                     "job": self.job.copy(), "playback": self.playback.copy(),
                     "pet": self.pet.status() | {'active': self.job['running'] and self.job.get('scope') == 'pet'},
                     "findings": self.findings.public(),
+                    "village": self.village.public(),
                     "background": self.memory.public() | self.startup.public(),
                     "onboarding": self.onboarding.public(),
                     "events": list(self.events), "version": VERSION}
@@ -126,6 +137,7 @@ class AppState:
                 raise ValueError("API-токен должен содержать не более 128 байт")
             updated['widget_city'] = validate_city(updated['widget_city'])
             updated['pet_character'] = validate_character(updated['pet_character'])
+            updated['market'] = validate_market(updated['market'])
             return updated
 
     def settings(self, data):
@@ -408,6 +420,36 @@ class AppState:
             city = self.config['widget_city']
         return self.weather.snapshot(city)
 
+    def market_state(self, refresh=False, force=False):
+        with self.lock:
+            settings = self.config['market']
+        if refresh:
+            self.markets.refresh_catalog()
+            self.markets.refresh(settings, force)
+        return self.markets.snapshot(settings)
+
+    def market_settings(self, data):
+        settings = validate_market(data)
+        with self.control, self.lock:
+            previous = self.config['market']
+            self.config['market'] = settings
+            try:
+                self.save()
+            except OSError:
+                self.config['market'] = previous
+                raise
+        self.markets.refresh(settings)
+        return self.market_state()
+
+    def market_preview(self, pair):
+        with self.lock:
+            settings = self.config['market']
+        if not pair:
+            pair = settings['selected'] or next(iter(settings['pairs']), None)
+        if pair is not None and pair not in settings['pairs']:
+            raise ValueError('Пара не входит в список')
+        return self.markets.chart(pair, settings['days'])
+
     def choose_city(self, ident):
         city = self.weather.selected(ident)
         with self.control, self.lock:
@@ -419,19 +461,35 @@ class AppState:
     def widget(self, kind):
         with self.control:
             if kind not in KINDS:
-                raise ValueError('Выберите часы, погоду или общий экран')
+                raise ValueError('Выберите виджет из списка')
             if self.device.get('kind') != 'stream':
                 raise ValueError('Сначала подключите кубик с PCStream')
-            if kind != 'clock' and not self.config['widget_city']:
+            if kind in ('weather', 'combined') and not self.config['widget_city']:
                 raise ValueError('Сначала выберите город для погоды')
+            if kind == 'markets' and not self.config['market']['pairs']:
+                raise ValueError('Сначала добавьте валютную пару')
+            if kind == 'village' and self.village.public() is None:
+                raise ValueError('Сначала создайте героя')
             self._stop_stream()
             def action(config):
                 with self.lock:
                     self.playback = {}
+                started = time.monotonic()
                 def supplier():
+                    if kind == 'village':
+                        return self.village.scene()
                     with self.lock:
                         city = self.config['widget_city']
-                    if kind != 'clock':
+                        market = self.config['market']
+                    if kind == 'markets':
+                        self.markets.refresh(market)
+                        pairs = market['pairs']
+                        pair = market['selected']
+                        if pairs and pair is None:
+                            index = int((time.monotonic() - started) / market['seconds']) % len(pairs)
+                            pair = pairs[index]
+                        return self.markets.chart(pair, market['days'])
+                    if kind in ('weather', 'combined'):
                         self.weather.refresh(city)
                     return self.weather.snapshot(city)
                 def stats(value):
@@ -597,6 +655,23 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(app.library())
             elif url.path == '/api/widgets/state':
                 self.reply(app.widget_state())
+            elif url.path == '/api/markets/state':
+                self.reply(app.market_state())
+            elif url.path == '/api/markets/catalog':
+                self.reply(app.markets.catalog())
+            elif url.path == '/api/village/journal':
+                self.reply({'entries': app.village.journal()})
+            elif url.path == '/api/village/preview':
+                query = urllib.parse.parse_qs(url.query)
+                if 'event' in query:
+                    scene = app.village.journal_scene(query['event'][0])
+                elif 'home' in query:
+                    scene = village_poster(query['home'][0], query.get('look', ['wanderer'])[0], query.get('color', ['mint'])[0])
+                else:
+                    scene = app.village.scene()
+                output = io.BytesIO()
+                render_village(scene).save(output, 'PNG')
+                self.reply(output.getvalue(), 'image/png')
             elif url.path == '/api/pet/preview':
                 output = io.BytesIO()
                 app.pet.image().save(output,'PNG')
@@ -609,10 +684,17 @@ class Handler(BaseHTTPRequestHandler):
                 app.findings.preview(kind).save(output,'JPEG',quality=88)
                 self.reply(output.getvalue(),'image/jpeg')
             elif url.path == '/api/widgets/preview':
-                kind = urllib.parse.parse_qs(url.query).get('kind',['clock'])[0]
+                query = urllib.parse.parse_qs(url.query)
+                kind = query.get('kind', ['clock'])[0]
+                pair = query.get('pair', [''])[0]
                 output = io.BytesIO()
-                render_widget(kind,app.widget_state()).save(output,'PNG')
-                self.reply(output.getvalue(),'image/png')
+                snapshot = app.market_preview(pair) if kind == 'markets' else app.village.scene() if kind == 'village' else app.widget_state()
+                if kind == 'markets' and query.get('animate') == ['1'] and len(snapshot['points']) > 1:
+                    save_market_animation(snapshot, output)
+                    self.reply(output.getvalue(), 'image/apng')
+                else:
+                    render_widget(kind, snapshot).save(output, 'PNG')
+                    self.reply(output.getvalue(), 'image/png')
             elif url.path in ("/api/thumbnail", "/api/preview"):
                 ident = urllib.parse.parse_qs(url.query).get("id", [""])[0]
                 path = app.file(ident)
@@ -639,7 +721,9 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path in ("/", "/index.html"):
                 data = (ASSETS / "index.html").read_text("utf-8").replace("__CSRF__", app.csrf).replace('__VERSION__', VERSION)
                 self.reply(data.encode(), "text/html; charset=utf-8")
-            elif url.path in ("/app.js", "/widgets.js", "/pet.js", "/updates.js", "/onboarding.js", "/style.css", "/findings.css", "/onboarding.css", "/cube.svg"):
+            elif url.path in ("/app.js", "/widgets.js", "/markets.js", "/pet.js", "/village.js", "/updates.js",
+                              "/onboarding.js", "/style.css", "/markets.css", "/findings.css", "/village.css",
+                              "/onboarding.css", "/cube.svg"):
                 path = ASSETS / url.path[1:]
                 self.reply(path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
             elif url.path == "/favicon.ico":
@@ -744,6 +828,12 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == '/api/widgets/show':
                 app.widget(data.get('kind'))
                 result = {'ok':True}
+            elif url.path == '/api/markets/settings':
+                result = app.market_settings(data)
+            elif url.path == '/api/markets/refresh':
+                result = app.market_state(refresh=True, force=data.get('force') is True)
+            elif url.path == '/api/village/profile':
+                result = app.village.configure(data)
             elif url.path in ('/api/pet/show','/api/pet/call'):
                 app.show_pet(call=url.path.endswith('/call'))
                 result = {'ok':True,'pet':app.public()['pet']}
@@ -881,6 +971,7 @@ def main():
     server.update_nonce = args.update_health
     ownership.publish(server.server_port)
     app.updates.start_polling()
+    app.village.start()
     resume_path = storage / 'update-resume.json'
     if resume_path.is_file():
         try:
@@ -924,6 +1015,7 @@ def main():
     finally:
         app.stop.set()
         app.updates.shutdown.set()
+        app.village.close()
         if tray:
             tray.stop()
         server.server_close()

@@ -3,6 +3,7 @@ const $ = selector => document.querySelector(selector);
 const key = $('meta[name="cubedesk-key"]').content;
 let state = null, library = [], importing = false, switching = false, previewId = null, toastTimer, previousJob = false, serverGone = false;
 const titles = {connect:'Подключим ваш кубик',setup:'Настроим новый кубик',library:'Ваша медиатека',widgets:'Виджеты для вашего кубика',background:'Кубик работает сам',guide:'Всё начинается с подключения',updates:'Всегда актуальный CubeDesk'};
+const widgetRoutes = new Map([['widgets','daily'], ['widgets/nature','nature'], ['widgets/pets','pets'], ['widgets/village','village'], ['widgets/markets','markets']]);
 let backgroundSaving = false;
 const bytes = size => size == null ? '—' : size < 1048576 ? `${Math.round(size / 1024)} КБ` : `${(size / 1048576).toFixed(1)} МБ`;
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -13,7 +14,18 @@ async function api(path, data) {
   if (!response.ok) throw new Error(result.error || 'Не удалось выполнить действие');
   return result;
 }
-function page(name) { if (!(name in titles)) name = 'connect'; document.querySelectorAll('.page').forEach(el => el.classList.toggle('active',el.id === `page-${name}`)); document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active',el.dataset.page === name)); $('#page-title').textContent = titles[name]; if (location.hash !== `#${name}`) history.replaceState(null,'',`#${name}`); window.scrollTo({top:0,behavior:'instant'}); if (name === 'widgets' && typeof loadWidgets === 'function') loadWidgets(true); }
+function page(route) {
+  if (route === 'markets') route = 'widgets/markets';
+  const widgetTab = widgetRoutes.get(route);
+  if (!widgetTab && !Object.hasOwn(titles, route)) route = 'connect';
+  const name = widgetTab ? 'widgets' : route;
+  document.querySelectorAll('.page').forEach(el => el.classList.toggle('active',el.id === `page-${name}`));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active',el.dataset.page === name));
+  $('#page-title').textContent = titles[name];
+  if (location.hash !== `#${route}`) history.replaceState(null,'',`#${route}`);
+  window.scrollTo({top:0,behavior:'instant'});
+  if (widgetTab && typeof selectWidgetTab === 'function') selectWidgetTab(widgetTab);
+}
 document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('click', () => page(el.dataset.page)));
 window.addEventListener('hashchange', () => page(location.hash.slice(1)));
 function renderState() {
@@ -36,9 +48,10 @@ function renderState() {
   $('#play').disabled = d.kind !== 'stream' || (j.running && !(streamRunning && ['file','widget','pet'].includes(j.scope))) || !library.some(item => !item.error) || importing || switching;
   $('#stop').disabled = !streamRunning || switching;
   const measured = state.playback?.fps;
+  const widgetEdge = state.playback?.resolution || 240;
   $('#player-title').textContent = streamRunning && j.scope === 'pet' ? 'Питомец на кубике' : streamRunning && j.scope === 'widget' ? 'Виджет на кубике' : streamRunning && j.scope === 'file' ? 'Выбранный файл' : 'Воспроизведение всей папки';
   $('#player-description').textContent = j.running && j.kind === 'stream' ?
-    j.scope === 'pet' ? `${state.pet?.name || 'Моти'} · ${state.pet?.label || 'Отдыхает'}` : j.scope === 'widget' ? `${j.message} · 240×240` : `${measured ? `${measured.toLocaleString('ru-RU')} кадров/с · ${state.playback.resolution}×${state.playback.resolution} · ` : 'Подготовка кадров · '}${j.message}` :
+    j.scope === 'pet' ? `${state.pet?.name || 'Моти'} · ${state.pet?.label || 'Отдыхает'}` : j.scope === 'widget' ? `${j.message} · ${widgetEdge}×${widgetEdge}` : `${measured ? `${measured.toLocaleString('ru-RU')} кадров/с · ${state.playback.resolution}×${state.playback.resolution} · ` : 'Подготовка кадров · '}${j.message}` :
     'Исходная скорость GIF · кадры готовятся заранее';
   $('#library-mode-note').textContent = d.kind === 'stock' ? 'Штатная прошивка: «Показать» загрузит один файл в память кубика. JPG готовится автоматически; GIF нужен размером 240×240. Для длинных анимаций требуется PCStream.' : d.kind === 'stream' ? '«Показать на кубике» запускает только выбранный файл: GIF повторяется, картинка остаётся на экране. Можно переключать файлы во время показа. «Всю папку» включает всю медиатеку по очереди. ПК должен оставаться включённым.' : 'Для показа на устройстве сначала подключите кубик. Просматривать и добавлять файлы можно уже сейчас.';
   $('#event-log').textContent = state.events.length ? state.events.map(e => `${e.time}  ${e.message}`).join('\n') : 'Пока нет событий.';
@@ -55,6 +68,7 @@ function renderState() {
   previousJob = j.running;
   if (typeof renderWidgetControls === 'function') renderWidgetControls();
   if (typeof renderPetControls === 'function') renderPetControls();
+  if (typeof renderVillageControls === 'function') renderVillageControls();
 }
 async function refreshState() { if (serverGone) return; try { state = await api('/api/state'); renderState(); } catch { $('#connection-badge').textContent = 'Приложение недоступно'; $('#connect-message').textContent = 'Запустите CubeDesk заново. Сервер не отвечает.'; } }
 function renderBackground() {

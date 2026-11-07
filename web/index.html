@@ -10,8 +10,12 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/findings.css">
   <link rel="stylesheet" href="/onboarding.css">
+  <link rel="stylesheet" href="/markets.css">
+  <link rel="stylesheet" href="/village.css">
   <script src="/app.js" defer></script>
   <script src="/widgets.js" defer></script>
+  <script src="/markets.js" defer></script>
+  <script src="/village.js" defer></script>
   <script src="/pet.js" defer></script>
   <script src="/updates.js" defer></script>
   <script src="/onboarding.js" defer></script>
@@ -90,34 +94,146 @@
     </section>
 
     <section id="page-widgets" class="page" aria-labelledby="page-title">
-      <div class="widget-intro"><p>Выберите экран или позовите маленького друга.</p><button id="widgets-stop" class="secondary compact" disabled>■ Остановить</button></div>
-      <section class="city-settings card" aria-labelledby="city-heading">
-        <details id="city-editor"><summary id="city-heading"><span class="city-pin" aria-hidden="true">⌖</span><span id="chosen-city">Выберите город для погоды</span><span class="city-edit-label">Изменить</span></summary>
-          <form id="city-search-form" class="city-search"><label class="city-query-label" for="city-query">Название города<input id="city-query" type="search" placeholder="Название города" minlength="2" maxlength="100" autocomplete="off" required></label><button id="city-search" class="primary">Найти</button></form>
-          <div id="city-results" class="city-results" aria-live="polite"></div>
-        </details><button id="weather-refresh" class="secondary compact" disabled>↻ Обновить</button>
-        <p id="weather-status" class="weather-status" role="status">Для погоды выберите город.</p>
+      <div class="widget-controls">
+        <div class="widget-toolbar card">
+          <div class="widget-output" role="status">
+            <span class="widget-output-light" aria-hidden="true"></span>
+            <div><span class="widget-output-label">Сейчас на кубике</span><strong id="widget-now">Подключаемся…</strong></div>
+          </div>
+          <button id="widgets-stop" class="secondary compact" type="button" disabled><span aria-hidden="true">■</span> Стоп</button>
+        </div>
+        <div class="widget-tabs" role="tablist" aria-label="Категории виджетов">
+          <a id="widget-tab-daily" href="#widgets" role="tab" aria-selected="true" aria-controls="widget-panel-daily" data-widget-tab="daily">Часы и погода</a>
+          <a id="widget-tab-nature" href="#widgets/nature" role="tab" aria-selected="false" aria-controls="widget-panel-nature" data-widget-tab="nature" tabindex="-1">Природа</a>
+          <a id="widget-tab-pets" href="#widgets/pets" role="tab" aria-selected="false" aria-controls="widget-panel-pets" data-widget-tab="pets" tabindex="-1">Питомцы</a>
+          <a id="widget-tab-village" href="#widgets/village" role="tab" aria-selected="false" aria-controls="widget-panel-village" data-widget-tab="village" tabindex="-1">Жизнь за стеклом</a>
+          <a id="widget-tab-markets" href="#widgets/markets" role="tab" aria-selected="false" aria-controls="widget-panel-markets" data-widget-tab="markets" tabindex="-1">Курсы валют</a>
+        </div>
+      </div>
+
+      <section id="widget-panel-daily" class="widget-panel" role="tabpanel" aria-labelledby="widget-tab-daily">
+        <div class="widget-grid">
+          <article class="widget-card card"><div class="widget-preview clock-preview"><img data-widget-preview="clock" alt="Предпросмотр часов" width="240" height="240" loading="lazy"></div><div class="widget-card-body"><h3>Часы</h3><p>Время, день недели и дата.</p><button class="primary show-widget" data-kind="clock" disabled>Показать на кубике ↗</button></div></article>
+          <article class="widget-card card"><div class="widget-preview weather-preview"><img data-widget-preview="weather" alt="Предпросмотр погоды" width="240" height="240" loading="lazy"></div><div class="widget-card-body"><h3>Погода</h3><p>Температура, ветер и влажность.</p><button class="primary show-widget" data-kind="weather" disabled>Показать на кубике ↗</button></div></article>
+          <article class="widget-card card"><div class="widget-preview combined-preview"><img data-widget-preview="combined" alt="Предпросмотр часов и погоды" width="240" height="240" loading="lazy"></div><div class="widget-card-body"><h3>Часы и погода</h3><p>Время и прогноз на одном экране.</p><button class="primary show-widget" data-kind="combined" disabled>Показать на кубике ↗</button></div></article>
+        </div>
+        <section class="city-settings card" aria-labelledby="city-heading">
+          <details id="city-editor"><summary id="city-heading"><span class="city-pin" aria-hidden="true">⌖</span><span id="chosen-city">Выберите город для погоды</span><span class="city-edit-label">Изменить</span></summary>
+            <form id="city-search-form" class="city-search"><label class="city-query-label" for="city-query">Название города<input id="city-query" type="search" placeholder="Название города" minlength="2" maxlength="100" autocomplete="off" required></label><button id="city-search" class="primary">Найти</button></form>
+            <div id="city-results" class="city-results" aria-live="polite"></div>
+          </details><button id="weather-refresh" class="secondary compact" disabled>↻ Обновить</button>
+          <p id="weather-status" class="weather-status" role="status">Для погоды выберите город.</p>
+        </section>
+        <div class="widget-footnote"><p>Погода предоставлена <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Поиск городов использует <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>.</p></div>
       </section>
-      <section class="pet-card card" aria-labelledby="pet-heading">
-        <div class="pet-scene"><img id="pet-preview" alt="Моти — котик внутри кубика" width="240" height="240"></div>
-        <div class="pet-description"><div class="pet-topline"><span class="widget-number">МАЛЕНЬКИЙ ДРУГ</span><div class="pet-picker" role="group" aria-label="Выбор питомца"><button type="button" data-pet="moti" aria-pressed="true"><i class="moti-dot"></i>Моти</button><button type="button" data-pet="momo" aria-pressed="false"><i class="momo-dot"></i>Момо</button></div></div>
-          <div class="pet-name-row"><h2 id="pet-heading">Моти</h2><span class="pet-status"><i></i><span id="pet-status">Отдыхает</span></span></div><p id="pet-description">Подойдёт к стеклу и покажет обе лапки.</p><div class="pet-actions"><button id="pet-call" class="primary" disabled>Позвать ♡</button><button id="pet-show" class="secondary" disabled>Показать питомца</button><button id="pet-find" class="secondary" hidden>Принести находку ✧</button></div>
+
+      <section id="widget-panel-pets" class="widget-panel" role="tabpanel" aria-labelledby="widget-tab-pets" hidden>
+        <section class="pet-card card" aria-labelledby="pet-heading">
+          <div class="pet-scene"><img id="pet-preview" alt="Моти — котик внутри кубика" width="240" height="240"></div>
+          <div class="pet-description"><div class="pet-topline"><span class="widget-number">МАЛЕНЬКИЙ ДРУГ</span><div class="pet-picker" role="group" aria-label="Выбор питомца"><button type="button" data-pet="moti" aria-pressed="true"><i class="moti-dot"></i>Моти</button><button type="button" data-pet="momo" aria-pressed="false"><i class="momo-dot"></i>Момо</button></div></div>
+            <div class="pet-name-row"><h2 id="pet-heading">Моти</h2><span class="pet-status"><i></i><span id="pet-status">Отдыхает</span></span></div><p id="pet-description">Подойдёт к стеклу и покажет обе лапки.</p><div class="pet-actions"><button id="pet-call" class="primary" disabled>Позвать ♡</button><button id="pet-show" class="secondary" disabled>Показать питомца</button><button id="pet-find" class="secondary" hidden>Принести находку ✧</button></div>
+          </div>
+        </section>
+        <section id="findings-card" class="finding-card card" aria-labelledby="findings-heading" hidden>
+          <div class="finding-heading"><div><span class="widget-number">МАЛЕНЬКИЕ СОКРОВИЩА</span><h3 id="findings-heading">Находки Момо</h3></div><button id="findings-folder" class="secondary">Выбрать папку</button></div>
+          <p id="findings-source" class="finding-source">Момо будет приносить фотографии из выбранной папки.</p>
+          <div id="findings-empty" class="finding-empty"><span aria-hidden="true">✧</span><p>Доверьте Момо папку с фото — он найдёт в ней что-нибудь особенное.</p></div>
+          <div id="findings-result" class="finding-result" hidden><img id="findings-preview" width="80" height="80" alt="Фотография, которую принёс Момо"><div class="finding-copy"><strong id="findings-name"></strong><span id="findings-caption">Смотрите, что нашёл!</span><div class="finding-actions"><button id="findings-next" class="text-link">Принести другую ↻</button><button id="findings-pin" class="text-link">В рамку ♡</button><button id="findings-open" class="text-link">Открыть оригинал ↗</button></div></div></div>
+          <div id="findings-frame" class="finding-frame" hidden><span id="findings-frame-name"></span><button id="findings-unpin" class="text-link">Снять рамку</button></div>
+        </section>
+      </section>
+
+      <section id="widget-panel-nature" class="widget-panel" role="tabpanel" aria-labelledby="widget-tab-nature" hidden>
+        <p class="widget-panel-note">Природа в стекле. Четыре тихие сцены с мягким свечением.</p>
+        <div class="widget-grid ambient-grid">
+          <article class="widget-card card">
+            <div class="widget-preview ambient-preview"><img src="/api/widgets/preview?kind=storm" alt="Молния среди туч и дождя" width="240" height="240" loading="lazy"></div>
+            <div class="widget-card-body"><h3>Гроза</h3><p>Косой дождь, круги на воде и редкая молния.</p><button class="primary show-widget" data-kind="storm" disabled>Показать на кубике ↗</button></div>
+          </article>
+          <article class="widget-card card">
+            <div class="widget-preview ambient-preview"><img src="/api/widgets/preview?kind=fireflies" alt="Огоньки над туманным лесом" width="240" height="240" loading="lazy"></div>
+            <div class="widget-card-body"><h3>Светлячки</h3><p>Тёплые огоньки плывут над ночным лесом.</p><button class="primary show-widget" data-kind="fireflies" disabled>Показать на кубике ↗</button></div>
+          </article>
+          <article class="widget-card card">
+            <div class="widget-preview ambient-preview"><img src="/api/widgets/preview?kind=aurora" alt="Северное сияние над горами" width="240" height="240" loading="lazy"></div>
+            <div class="widget-card-body"><h3>Северное сияние</h3><p>Цветные ленты медленно переливаются над горами.</p><button class="primary show-widget" data-kind="aurora" disabled>Показать на кубике ↗</button></div>
+          </article>
+          <article class="widget-card card">
+            <div class="widget-preview ambient-preview"><img src="/api/widgets/preview?kind=jellyfish" alt="Светящиеся медузы в толще воды" width="240" height="240" loading="lazy"></div>
+            <div class="widget-card-body"><h3>Медузы</h3><p>Полупрозрачные медузы качаются в тёмной воде.</p><button class="primary show-widget" data-kind="jellyfish" disabled>Показать на кубике ↗</button></div>
+          </article>
         </div>
       </section>
-      <section id="findings-card" class="finding-card card" aria-labelledby="findings-heading" hidden>
-        <div class="finding-heading"><div><span class="widget-number">МАЛЕНЬКИЕ СОКРОВИЩА</span><h3 id="findings-heading">Находки Момо</h3></div><button id="findings-folder" class="secondary">Выбрать папку</button></div>
-        <p id="findings-source" class="finding-source">Момо будет приносить фотографии из выбранной папки.</p>
-        <div id="findings-empty" class="finding-empty"><span aria-hidden="true">✧</span><p>Доверьте Момо папку с фото — он найдёт в ней что-нибудь особенное.</p></div>
-        <div id="findings-result" class="finding-result" hidden><img id="findings-preview" width="80" height="80" alt="Фотография, которую принёс Момо"><div class="finding-copy"><strong id="findings-name"></strong><span id="findings-caption">Смотрите, что нашёл!</span><div class="finding-actions"><button id="findings-next" class="text-link">Принести другую ↻</button><button id="findings-pin" class="text-link">В рамку ♡</button><button id="findings-open" class="text-link">Открыть оригинал ↗</button></div></div></div>
-        <div id="findings-frame" class="finding-frame" hidden><span id="findings-frame-name"></span><button id="findings-unpin" class="text-link">Снять рамку</button></div>
+
+      <section id="widget-panel-village" class="widget-panel" role="tabpanel" aria-labelledby="widget-tab-village" hidden>
+        <div class="village-shell card">
+          <div class="village-stage">
+            <span class="village-stage-tag"><i></i> ПРИБРЕЖНЫЙ ПОСЁЛОК</span>
+            <img id="village-preview" src="/api/village/preview?home=lighthouse" width="240" height="240" loading="lazy" alt="Пиксельный посёлок с маяком, берегом и лесом">
+          </div>
+          <div class="village-copy">
+            <h2>Жизнь за стеклом</h2>
+            <form id="village-form">
+              <p>Создайте героя и выберите ему дом. Дальше он будет жить в посёлке сам.</p>
+              <label class="village-field" for="village-name">Имя героя<input id="village-name" maxlength="24" required autocomplete="off" placeholder="Например, Саша"></label>
+              <div class="village-appearance">
+                <label class="village-field" for="village-look">Внешность<select id="village-look"><option value="wanderer">Путник</option><option value="cat">Котик</option><option value="fox">Лисёнок</option></select></label>
+                <label class="village-field" for="village-color">Цвет одежды<select id="village-color"><option value="mint">Мятный</option><option value="amber">Янтарный</option><option value="rose">Розовый</option><option value="sky">Голубой</option></select></label>
+              </div>
+              <fieldset class="village-homes">
+                <legend>Где поселиться</legend>
+                <label><input type="radio" name="village-home" value="lighthouse" checked><span>У маяка</span></label>
+                <label><input type="radio" name="village-home" value="coast"><span>На побережье</span></label>
+                <label><input type="radio" name="village-home" value="forest"><span>У леса</span></label>
+              </fieldset>
+              <div class="village-actions"><button id="village-save" class="primary" type="submit">Поселиться</button><button id="village-cancel" class="secondary" type="button" hidden>Отмена</button></div>
+            </form>
+            <div id="village-resident" hidden>
+              <p id="village-home-name"></p>
+              <div class="village-calendar"><strong id="village-hero"></strong><span id="village-calendar"></span></div>
+              <p id="village-task"></p>
+              <div class="village-actions"><button id="village-show" class="primary" type="button" disabled>Показать на кубике ↗</button><button id="village-edit" class="secondary" type="button">Изменить героя</button></div>
+              <p id="village-display-hint" class="village-display-hint" hidden>Подключите кубик с PCStream, чтобы показать посёлок.</p>
+            </div>
+          </div>
+        </div>
+        <div id="village-alert" class="village-alert card" role="status" hidden><span>СОБЫТИЕ ИДЁТ</span><strong id="village-alert-title"></strong><p id="village-alert-text"></p></div>
+        <details id="village-neighbors" class="village-neighbors card" hidden>
+          <summary>Жители посёлка</summary>
+          <p id="village-town-stock"></p>
+          <p id="village-last-talk" hidden></p>
+          <ul id="village-people"></ul>
+        </details>
+        <section id="village-journal" class="village-journal" aria-labelledby="village-journal-heading" hidden>
+          <h3 id="village-journal-heading">Журнал посёлка</h3>
+          <p id="village-journal-empty" class="village-journal-empty card">Здесь появятся редкие события и кадры с места.</p>
+          <ul id="village-entries"></ul>
+        </section>
       </section>
-      <div class="widget-section-heading"><h2>На каждый день</h2><span id="widget-now">Выберите виджет</span></div>
-      <div class="widget-grid">
-        <article class="widget-card card" data-widget="clock"><div class="widget-preview clock-preview"><img data-widget-preview="clock" alt="Предпросмотр часов" width="240" height="240" loading="lazy"><span class="widget-preview-tag">ЖИВЫЕ ЧАСЫ</span></div><div class="widget-card-body"><span class="widget-number">01 / ВРЕМЯ</span><h3>Часы</h3><p>Время, день недели и дата.</p><button class="primary show-widget" data-kind="clock" disabled>Показать часы ↗</button></div></article>
-        <article class="widget-card card" data-widget="weather"><div class="widget-preview weather-preview"><img data-widget-preview="weather" alt="Предпросмотр погоды" width="240" height="240" loading="lazy"><span class="widget-preview-tag">ПОГОДА РЯДОМ</span></div><div class="widget-card-body"><span class="widget-number">02 / ЗА ОКНОМ</span><h3>Погода</h3><p>Температура, ветер и влажность.</p><button class="primary show-widget" data-kind="weather" disabled>Показать погоду ↗</button></div></article>
-        <article class="widget-card card" data-widget="combined"><div class="widget-preview combined-preview"><img data-widget-preview="combined" alt="Предпросмотр часов и погоды" width="240" height="240" loading="lazy"><span class="widget-preview-tag">ВСЁ ВМЕСТЕ</span></div><div class="widget-card-body"><span class="widget-number">03 / В ОДНОМ ВЗГЛЯДЕ</span><h3>Часы и погода</h3><p>Всё важное на одном экране.</p><button class="primary show-widget" data-kind="combined" disabled>Показать общий экран ↗</button></div></article>
-      </div>
-      <div class="widget-footnote"><p>ПК и CubeDesk должны оставаться включёнными. Погода: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · города: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>.</p></div>
+
+      <section id="widget-panel-markets" class="widget-panel" role="tabpanel" aria-labelledby="widget-tab-markets" hidden>
+        <div class="market-hero card">
+          <div><h2>Валюты и криптовалюты</h2><p>Курс, изменение за период и график каждой пары.</p></div>
+          <button id="market-show" class="primary" disabled>Показать на кубике ↗</button>
+        </div>
+        <div class="market-tools"><p id="market-status" role="status">Загружаем список…</p><button id="market-refresh" class="secondary compact">Обновить курсы</button></div>
+        <div class="market-settings card">
+          <div class="market-field"><label for="market-days">Период графика</label><select id="market-days"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select></div>
+          <div class="market-field"><label for="market-selected">На кубике</label><select id="market-selected"><option value="">Все пары по очереди</option></select></div>
+          <div class="market-field"><label for="market-seconds">Смена пары</label><select id="market-seconds"><option value="4">4 секунды</option><option value="8" selected>8 секунд</option><option value="12">12 секунд</option><option value="20">20 секунд</option><option value="30">30 секунд</option><option value="60">60 секунд</option></select></div>
+          <form id="market-add" class="market-add">
+            <div class="market-field"><label for="market-kind">Тип пары</label><select id="market-kind"><option value="crypto">Криптовалюты</option><option value="fx">Обычные валюты</option></select></div>
+            <div class="market-field" id="market-crypto-field"><label for="market-crypto">Торговая пара</label><input id="market-crypto" list="market-crypto-list" placeholder="Например, BTC/USD" maxlength="25" autocomplete="off"><datalist id="market-crypto-list"></datalist></div>
+            <div class="market-fx" id="market-fx-fields" hidden><div class="market-field"><label for="market-base">Валюта</label><select id="market-base"></select></div><div class="market-field"><label for="market-quote">Курс в</label><select id="market-quote"></select></div></div>
+            <button id="market-add-button" class="secondary">＋ Добавить пару</button>
+          </form>
+        </div>
+        <div class="market-list-heading"><h3>Мои пары</h3><span id="market-count"></span></div>
+        <div id="market-grid" class="market-grid"></div>
+        <p id="market-empty" class="market-empty card" hidden>Добавьте пару, чтобы увидеть курс и график.</p>
+        <p class="market-sources">Криптовалюты — <a href="https://www.kraken.com/" target="_blank" rel="noopener noreferrer">Kraken</a>. Дневные справочные курсы валют — <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer">Frankfurter</a>. Дата котировки указана на карточке.</p>
+      </section>
+      <p class="widget-stream-note">Показ на кубике идёт с ПК, пока CubeDesk запущен.</p>
     </section>
 
     <section id="page-guide" class="page" aria-labelledby="page-title">

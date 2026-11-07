@@ -1,0 +1,39 @@
+.market-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 18px;
+  border-color: #283953;
+  background: radial-gradient(ellipse at 84% 8%, #203e56, transparent 68%), #101a2d;
+  color: #f1f5ff;
+}
+.market-hero h2 { margin: 0; font-size: 17px; }
+.market-hero p { color: #b2c3da; margin: 4px 0 0; font-size: 12px; }
+.market-hero button { min-height: 38px; padding: 8px 13px; font-size: 12px; }
+.market-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 14px 0; }
+.market-tools p { flex: 1; margin: 0; font-size: 13px; }
+.market-settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 18px; }
+.market-field { min-width: 0; display: grid; gap: 6px; }
+.market-field label { color: #42536a; font-size: 12px; font-weight: 600; }
+.market-field select, .market-field input { min-width: 0; width: 100%; min-height: 39px; padding: 8px; border: 1px solid #d8e2ef; border-radius: 8px; background: #f8fbff; color: #24364d; font: inherit; }
+.market-add { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(115px, .8fr) minmax(0, 1.8fr) auto; align-items: end; gap: 12px; border-top: 1px solid #e4edf5; padding-top: 15px; }
+.market-fx { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.market-fx[hidden], .market-field[hidden] { display: none; }
+.market-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 10px; }
+.market-list-heading span, .market-sources { color: #566981; font-size: 13px; }
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 13px; }
+.market-card { min-width: 0; overflow: hidden; border: 1px solid #dce6f1; }
+.market-card.on-cube { outline: 2px solid #259987; outline-offset: 1px; }
+.market-card img { width: 100%; height: auto; aspect-ratio: 1; display: block; background: #101a2d; }
+.market-card-controls { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 7px 9px; }
+.market-card-status { font-size: 11px; color: #566981; }
+.market-card-buttons { display: flex; gap: 3px; }
+.market-card-buttons button { width: 30px; height: 30px; border: 1px solid #dce6f1; border-radius: 7px; background: #f8fbff; color: #344b65; }
+.market-empty { padding: 18px; }
+@media (max-width: 780px) {
+  .market-hero { align-items: flex-start; flex-wrap: wrap; }
+  .market-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .market-add { grid-template-columns: minmax(0, 1fr); }
+  .market-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }
+}

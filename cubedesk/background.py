@@ -41,7 +41,8 @@ class PlaybackMemory:
         if scene.get('scope') == 'file':
             label = Path(scene.get('file_path', '')).name
         if scene.get('scope') == 'widget':
-            label = {'clock': 'Часы', 'weather': 'Погода', 'combined': 'Часы и погода'}.get(scene.get('widget'), 'Виджет')
+            from cubedesk.widgets import KINDS
+            label = KINDS.get(scene.get('widget'), 'Виджет')
         return {'resume_on_start': self.enabled, 'paused': self.paused,
                 'has_selection': bool(self.selection), 'last_scene': label}
 

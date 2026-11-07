@@ -8,15 +8,19 @@ import os
 from pathlib import Path
 import time
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 from cube_player import CubeConnection, rgb565
-from smooth_player import encode_jpeg
+from smooth_player import encode_jpeg, wait_frame
+from cubedesk.ambient import SCENES, render_ambient
+from cubedesk.village_art import render_village
 from cubedesk.weather import condition
 
-KINDS = {'clock': 'Часы', 'weather': 'Погода', 'combined': 'Часы и погода'}
+KINDS = {'clock': 'Часы', 'weather': 'Погода', 'combined': 'Часы и погода', 'markets': 'Курсы валют',
+         'village': 'Жизнь за стеклом', **SCENES}
 S = 2
 INK = '#24364d'
 MUTED = '#64768b'
+MARKET_ANIMATION_SECONDS = 3.2
 MONTHS = ('января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря')
 DAYS = ('Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье')
 
@@ -31,8 +35,10 @@ def font(size, weight='regular'):
     return ImageFont.load_default(size=round(size*S))
 
 
-@lru_cache(maxsize=3)
+@lru_cache(maxsize=4)
 def background(kind):
+    if kind == 'markets':
+        return Image.new('RGBA', (240*S, 240*S), '#101a2d')
     colors = {'clock':((234,222,252),(198,224,245)), 'weather':((218,244,235),(213,227,251)),
               'combined':((252,228,214),(221,216,250))}[kind]
     image = Image.new('RGBA',(240*S,240*S))
@@ -133,8 +139,134 @@ def temperature(value):
     return '—°' if value is None else f'{round(value):d}°'.replace('-','−')
 
 
+@lru_cache(maxsize=3)
+def market_fill(accent, size):
+    fill = Image.new('RGBA', size)
+    draw = ImageDraw.Draw(fill)
+    width, height = size
+    for y in range(height):
+        alpha = round(64 * (1 - y / (height - 1)) ** 1.4)
+        draw.line((0, y, width - 1, y), fill=f'{accent}{alpha:02x}')
+    return fill
+
+
+def draw_market_graph(canvas, path, bounds, accent, phase):
+    x0, y0, x1, y1 = bounds
+    for y in (y0, (y0 + y1) // 2, y1):
+        canvas.draw.line((x0, y, x1, y), fill='#273852', width=S)
+
+    if len(path) > 1:
+        size = (x1 - x0 + 1, y1 - y0 + 1)
+        plot = [(x - x0, y - y0) for x, y in path]
+        mask = Image.new('L', size)
+        ImageDraw.Draw(mask).polygon([(plot[0][0], size[1] - 1), *plot, (plot[-1][0], size[1] - 1)], fill=255)
+        fill = market_fill(accent, size)
+        region = canvas.image.crop((x0, y0, x1 + 1, y1 + 1))
+        canvas.image.paste(Image.alpha_composite(region, fill), (x0, y0), mask)
+        canvas.draw.line(path, fill=accent, width=2*S, joint='curve')
+        if phase is not None:
+            draw_market_shimmer(canvas.image, plot, size, (x0, y0), accent, phase)
+
+    x, y = path[-1]
+    radius = 3*S
+    pulse = 0 if phase is None else (1 - math.cos(math.tau * phase)) / 2
+    halo = round((4 + 3 * pulse) * S)
+    center = halo + 3*S
+    glow = Image.new('RGBA', (center * 2 + 1,) * 2)
+    ImageDraw.Draw(glow).ellipse((center-halo, center-halo, center+halo, center+halo), fill=accent+'60')
+    canvas.image.alpha_composite(glow.filter(ImageFilter.GaussianBlur(1.5*S)), (x - center, y - center))
+    canvas.draw.ellipse((x-radius, y-radius, x+radius, y+radius), fill=accent)
+
+
+def draw_market_shimmer(image, path, size, origin, accent, phase):
+    width, height = size
+    reach = 38*S
+    center = phase * (width + 2*reach) - reach
+    falloff = [round(255 * max(0, 1 - abs(x - center) / reach) ** 2) for x in range(width)]
+    band = Image.new('L', (width, 1))
+    band.putdata(falloff)
+    band = band.resize((width, height), Image.Resampling.NEAREST)
+
+    glow = Image.new('L', size)
+    ImageDraw.Draw(glow).line(path, fill=200, width=7*S, joint='curve')
+    glow = glow.filter(ImageFilter.GaussianBlur(2.4*S))
+    layer = Image.new('RGBA', size, accent)
+    layer.putalpha(ImageChops.multiply(glow, band))
+    image.alpha_composite(layer, origin)
+
+    shine = Image.new('L', size)
+    ImageDraw.Draw(shine).line(path, fill=240, width=2*S, joint='curve')
+    layer = Image.new('RGBA', size, '#ffffff')
+    layer.putalpha(ImageChops.multiply(shine, band))
+    image.alpha_composite(layer, origin)
+
+
+def render_market(chart, phase=None):
+    canvas = Canvas('markets')
+    pair = chart.get('pair')
+    if not pair:
+        canvas.text((16, 20), 'Курсы валют', 23, '#f1f5ff', 'bold')
+        canvas.text((16, 83), 'Добавьте валютную пару', 14, '#a9b8cf', width=208)
+        return canvas.finish()
+
+    kind, name = pair.split(':', 1)
+    muted = '#a9b8cf'
+    canvas.text((16, 17), name, 24, '#f1f5ff', 'bold', width=164)
+    canvas.text((183, 23), f"{chart['days']} Д", 12, muted, width=42)
+    canvas.text((17, 47), 'КРИПТОВАЛЮТА' if kind == 'crypto' else 'ОБЫЧНАЯ ВАЛЮТА', 10, muted)
+    points = chart.get('points') or []
+    if not points:
+        message = 'Источник недоступен' if chart.get('error') else 'Загружаем котировки…' if chart.get('loading') else 'Котировки ещё не загружены'
+        canvas.text((17, 94), message, 14, muted, width=206)
+        canvas.text((17, 212), 'KRAKEN' if kind == 'crypto' else 'FRANKFURTER', 10, muted)
+        return canvas.finish()
+
+    first, last = points[0][1], points[-1][1]
+    change = (last / first - 1) * 100
+    change = 0 if abs(change) < 0.005 else change
+    accent = '#68ead0' if change > 0 else '#ff97a3' if change < 0 else '#a1bafe'
+    decimals = 2 if last >= 100 else 4 if last >= 1 else min(14, max(4, 3 - math.floor(math.log10(last))))
+    price = f'{last:,.{decimals}f}'.rstrip('0').rstrip('.').replace(',', ' ').replace('.', ',')
+    canvas.text((16, 66), price, 30, '#f1f5ff', 'bold', width=208)
+    if len(points) > 1:
+        percent = f'{change:+.2f} %' if change else '0,00 %'
+        canvas.text((17, 105), percent.replace('.', ',').replace('-', '−'), 14, accent, 'bold', width=115)
+        canvas.text((137, 108), 'за период', 10, muted)
+    else:
+        canvas.text((17, 105), 'Одна точка за период', 12, muted)
+
+    x0, x1, y0, y1 = 18*S, 222*S, 137*S, 194*S
+    low, high = min(p[1] for p in points), max(p[1] for p in points)
+    span = max(high-low, last * 0.00005)
+    duration = max(1, points[-1][0] - points[0][0])
+    center = (low+high)/2
+    path = [(round(x0+(x1-x0)*(stamp-points[0][0])/duration) if len(points) > 1 else (x0+x1)//2,
+             round((y0+y1)/2-(y1-y0-8*S)*(value-center)/span)) for stamp, value in points]
+    draw_market_graph(canvas, path, (x0, y0, x1, y1), accent, phase)
+    zone = dt.timezone.utc if kind == 'fx' else None
+    date = dt.datetime.fromtimestamp(points[-1][0], zone).strftime('%d.%m' if kind == 'fx' else '%d.%m %H:%M')
+    source = 'KRAKEN' if kind == 'crypto' else 'FRANKFURTER'
+    canvas.text((17, 213), f'{source} · {date}', 10, muted, width=160)
+    if chart.get('stale'):
+        canvas.text((183, 213), 'КЭШ', 10, '#ffd094')
+    return canvas.finish()
+
+
+def save_market_animation(chart, output):
+    frame_count = 32
+    frames = [render_market(chart, frame / frame_count) for frame in range(frame_count)]
+    frames[0].save(output, 'PNG', save_all=True, append_images=frames[1:], loop=0,
+                   duration=round(1000 * MARKET_ANIMATION_SECONDS / frame_count))
+
+
 def render(kind, weather=None, now=None):
     if kind not in KINDS:raise ValueError('Неизвестный виджет')
+    if kind in SCENES:
+        return render_ambient(kind)
+    if kind == 'village':
+        return render_village(weather)
+    if kind == 'markets':
+        return render_market(weather or {})
     now=now or dt.datetime.now().astimezone()
     weather=weather or {'city':None,'forecast':None,'phase':'not_configured'}
     forecast=weather.get('forecast') or {}
@@ -184,6 +316,9 @@ def play_widget(host, token, kind, stop, supplier, report=print, on_stats=None):
     last_data=None
     sent=0
     last_ack=0.0
+    ambient = kind in SCENES
+    animated_scene = ambient or kind == 'village'
+    scene_started = time.monotonic()
     try:
         while not stop.is_set():
             started=time.monotonic()
@@ -192,15 +327,36 @@ def play_widget(host, token, kind, stop, supplier, report=print, on_stats=None):
                     connection=CubeConnection(host,token,modern=True)
                     last_data=None
                     report('Виджет · '+KINDS[kind])
-                image=render(kind,supplier())
-                data=encode_jpeg(image,connection.max_jpeg,85)[0] if connection.flags & 1 else rgb565(image)
+                snapshot = None if ambient else supplier()
+                interval = 1
+                jpeg = bool(connection.flags & 1)
+                edge = 240
+                if animated_scene:
+                    image = render_ambient(kind, started - scene_started) if ambient else render_village(snapshot)
+                    edge = 120 if jpeg else 240
+                    interval = 1 / ((16 if ambient else 14) if jpeg else 3)
+                elif kind == 'markets' and jpeg and len(snapshot['points']) > 1:
+                    phase = (time.monotonic() % MARKET_ANIMATION_SECONDS) / MARKET_ANIMATION_SECONDS
+                    image = render_market(snapshot, phase)
+                    interval = 1 / 12
+                else:
+                    image = render(kind, snapshot)
+                data=encode_jpeg(image,connection.max_jpeg,85,edge=edge)[0] if jpeg else rgb565(image)
                 if data!=last_data:
-                    stats=connection.send_jpeg(data) if connection.flags & 1 else connection.send(data)
+                    stats=connection.send_jpeg(data) if jpeg else connection.send(data)
                     last_data=data;sent+=1;last_ack=time.monotonic()
-                    if on_stats:on_stats(dict(stats,widget=kind,frames=sent,resolution=240,updated_at=time.time()))
+                    if on_stats:
+                        details = dict(stats, widget=kind, frames=sent, resolution=edge, updated_at=time.time())
+                        if kind == 'markets':
+                            details['market_pair'] = snapshot.get('pair')
+                        on_stats(details)
                 elif time.monotonic()-last_ack>=3:
                     connection.send();last_ack=time.monotonic()
-                stop.wait(max(0,1-(time.monotonic()-started)))
+                remaining = max(0, interval - (time.monotonic() - started))
+                if animated_scene:
+                    wait_frame(stop, remaining)
+                else:
+                    stop.wait(remaining)
             except OSError:
                 if connection:connection.close()
                 connection=None

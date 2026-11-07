@@ -1,0 +1,47 @@
+.village-shell { display: grid; grid-template-columns: minmax(225px, .85fr) minmax(0, 1.15fr); overflow: hidden; }
+.village-stage { position: relative; display: grid; place-items: center; min-width: 0; padding: 48px 18px 22px; background: radial-gradient(ellipse at 50% 65%, #1c313e, #111926 72%); }
+.village-stage-tag { position: absolute; top: 16px; left: 18px; color: #c0dbd4; font-size: 10px; font-weight: 700; letter-spacing: .09em; }
+.village-stage-tag i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #90d6be; }
+.village-stage img { display: block; width: min(100%, 310px); height: auto; aspect-ratio: 1; border-radius: 18px; background: #000; image-rendering: pixelated; }
+.village-copy { min-width: 0; align-self: center; padding: 23px; }
+.village-copy h2 { margin: 0; font-size: 22px; }
+.village-copy p { margin: 5px 0 13px; font-size: 13px; }
+.village-field { display: grid; gap: 4px; min-width: 0; color: #526279; font-size: 12px; font-weight: 600; }
+.village-field input, .village-field select { width: 100%; min-width: 0; padding: 8px; min-height: 36px; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: #f8f9fe; font: inherit; }
+.village-appearance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 11px 0; }
+.village-homes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 13px; padding: 0; border: 0; min-width: 0; }
+.village-homes legend { margin-bottom: 5px; padding: 0; color: #526279; font-size: 12px; font-weight: 600; }
+.village-homes label { display: flex; align-items: center; gap: 4px; min-height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; cursor: pointer; }
+.village-homes label:has(:checked) { border-color: #a693eb; background: #f2edff; color: #513d9b; }
+.village-homes input { margin: 0; accent-color: var(--accent); }
+.village-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.village-actions button { min-height: 37px; padding: 8px 12px; font-size: 12px; }
+.village-calendar { display: grid; gap: 3px; margin: 12px 0 6px; }
+.village-calendar strong { overflow-wrap: anywhere; font-size: 20px; }
+.village-calendar span { color: #3a765f; font-size: 12px; font-weight: 600; }
+.village-copy .village-display-hint { margin: 10px 0 0; }
+.village-alert { display: grid; gap: 4px; margin-top: 13px; padding: 12px 15px; border-color: #ddd2aa; background: #fff9e8; }
+.village-alert span { color: #8b6633; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.village-alert p { margin: 0; font-size: 12px; }
+.village-journal { margin-top: 16px; }
+.village-neighbors { margin-top: 14px; padding: 12px 14px; }
+.village-neighbors summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.village-neighbors p { margin: 9px 0 0; color: #596a83; font-size: 12px; }
+#village-people { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 8px; list-style: none; padding: 0; margin: 9px 0 0; }
+#village-people li { padding: 7px 9px; border-radius: 7px; background: #f4f5fa; }
+#village-people strong, #village-people span { display: block; font-size: 12px; }
+#village-people span { margin-top: 2px; color: #61708a; }
+.village-journal h3 { margin: 0 0 8px; font-size: 16px; }
+.village-journal-empty { margin: 0; padding: 11px 14px; font-size: 12px; }
+#village-entries { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 9px; margin: 0; padding: 0; list-style: none; }
+#village-entries li { display: flex; align-items: center; gap: 9px; padding: 7px; min-width: 0; }
+#village-entries img { flex: none; border-radius: 7px; background: #000; }
+#village-entries small, #village-entries strong { display: block; }
+#village-entries small { color: #64728a; }
+#village-entries p { margin: 3px 0 0; font-size: 11px; }
+@media (max-width: 790px) {
+  .village-shell { grid-template-columns: minmax(0, 1fr); }
+  .village-stage { padding: 38px 12px 13px; }
+  .village-stage img { width: min(100%, 215px); }
+  .village-copy { padding: 15px; }
+}
