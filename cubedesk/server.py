@@ -52,6 +52,7 @@ class AppState:
         self.control = threading.RLock()
         self.config = {"host": "", "token": "", "folder": str(self.imports), "fps": 30, "seconds": 5, "detail": "smooth", "widget_city": None, "pet_character":"moti"}
         self.config['market'] = validate_market(MARKET_DEFAULTS)
+        self.config['village_detail'] = 'smooth'
         source = self.config_path if self.config_path.exists() else migrate
         if source and source.is_file():
             try:
@@ -125,6 +126,8 @@ class AppState:
             updated["host"] = validate_host(updated["host"]) if updated['host'] else ''
             if updated['detail'] not in ('smooth', 'balanced', 'sharp'):
                 raise ValueError('Выберите режим «Плавно», «Баланс» или «Чётко»')
+            if updated['village_detail'] not in ('smooth','balanced','sharp'):
+                raise ValueError('Выберите детализацию игры')
             folder = Path(str(updated["folder"])).expanduser()
             if 'folder' in data and not folder.is_dir():
                 raise ValueError("Папка не найдена на этом компьютере. Вставьте полный путь из Проводника.")
@@ -477,7 +480,10 @@ class AppState:
                 started = time.monotonic()
                 def supplier():
                     if kind == 'village':
-                        return self.village.scene()
+                        snapshot = self.village.scene()
+                        with self.lock:
+                            snapshot['stream_detail'] = self.config['village_detail']
+                        return snapshot
                     with self.lock:
                         city = self.config['widget_city']
                         market = self.config['market']
@@ -670,7 +676,8 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     scene = app.village.scene()
                 output = io.BytesIO()
-                render_village(scene).save(output, 'PNG')
+                render_village(scene, overview=query.get('view') == ['map'],
+                               show_bounds=query.get('bounds') == ['1']).save(output, 'PNG')
                 self.reply(output.getvalue(), 'image/png')
             elif url.path == '/api/pet/preview':
                 output = io.BytesIO()
@@ -834,6 +841,19 @@ class Handler(BaseHTTPRequestHandler):
                 result = app.market_state(refresh=True, force=data.get('force') is True)
             elif url.path == '/api/village/profile':
                 result = app.village.configure(data)
+            elif url.path == '/api/village/display':
+                mode = data.get('detail')
+                if mode not in ('smooth','balanced','sharp'):
+                    raise ValueError('Выберите детализацию игры')
+                with app.control, app.lock:
+                    previous = app.config['village_detail']
+                    app.config['village_detail'] = mode
+                    try:
+                        app.save()
+                    except OSError:
+                        app.config['village_detail'] = previous
+                        raise
+                result = {'detail':mode}
             elif url.path in ('/api/pet/show','/api/pet/call'):
                 app.show_pet(call=url.path.endswith('/call'))
                 result = {'ok':True,'pet':app.public()['pet']}

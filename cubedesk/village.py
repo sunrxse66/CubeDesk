@@ -12,6 +12,7 @@ import threading
 import time
 
 from cubedesk.background import atomic_json
+from cubedesk.village_map import game_map
 
 
 HOMES = {'lighthouse': 'Дом у маяка', 'coast': 'Дом на побережье', 'forest': 'Дом у леса'}
@@ -22,24 +23,17 @@ DAY = 1440
 MINUTES_PER_SECOND = 4
 SEASON_DAYS = 7
 HUB = 'square'
-PLACES = {'lighthouse': (76, 55), 'coast': (44, 102), 'forest': (169, 61),
-          HUB: (114, 104), 'pier': (74, 149), 'grove': (180, 103), 'garden': (143, 131),
-          'market': (106, 71), 'workshop': (133, 36), 'inn': (202, 61),
-          'west_lane': (29, 43), 'east_lane': (224, 32)}
+PLACES = game_map().points
 PLACE_NAMES = {'lighthouse': 'У маяка', 'coast': 'На берегу', 'forest': 'У леса', HUB: 'На площади',
                'pier': 'У причала', 'grove': 'В роще', 'garden': 'У грядок', 'market': 'У лавки',
-               'workshop': 'В мастерской', 'inn': 'У трактира', 'west_lane': 'Дома', 'east_lane': 'Дома'}
-ROADS = ((HUB, 'market'), (HUB, 'forest'), (HUB, 'grove'), (HUB, 'garden'), (HUB, 'coast'),
-         (HUB, 'pier'), ('coast', 'pier'), ('coast', 'west_lane'), ('west_lane', 'lighthouse'),
-         ('market', 'lighthouse'), ('market', 'workshop'), ('workshop', 'forest'), ('forest', 'inn'),
-         ('inn', 'grove'), ('inn', 'east_lane'))
-ROAD_BENDS = {('market','workshop'): ((126,73), (151,58), (149,37)),
-              ('inn','east_lane'): ((242,63), (242,36))}
+               'workshop': 'В мастерской', 'inn': 'У трактира', 'west_lane': 'Дома', 'east_lane': 'Дома',
+               'mill': 'У мельницы', 'orchard': 'В саду', 'bridge': 'На мосту', 'beach': 'На пляже', 'pond': 'У пруда'}
 TASKS = {'arrive': 'Обживается', 'sleep': 'Спит', 'breakfast': 'Готовит завтрак',
          'plant': 'Сажает семена', 'tend': 'Ухаживает за грядками', 'harvest': 'Собирает урожай',
          'fish': 'Ловит рыбу', 'gather': 'Собирает ветки',
          'visit': 'Идёт к соседям', 'talk': 'Разговаривает', 'trade': 'Обменивается товарами',
          'walk': 'Гуляет', 'build': 'Мастерит у дома', 'repair': 'Чинит общий причал',
+         'supplies':'Покупает семена', 'meal':'Обедает в трактире', 'restore':'Помогает посёлку',
          'event': 'Заметил что-то необычное'}
 
 
@@ -83,37 +77,18 @@ PEOPLE = {
 }
 
 
-def road_points(origin, target):
-    bends = ROAD_BENDS.get((origin,target), ROAD_BENDS.get((target,origin), ())[::-1])
-    return PLACES[origin], *bends, PLACES[target]
-
-
-@lru_cache(maxsize=180)
 def route(origin, target):
-    paths = [(0., (origin,))]
-    visited = set()
-    while paths:
-        length, path = min(paths)
-        paths.remove((length, path))
-        current = path[-1]
-        if current == target:
-            points = [PLACES[origin]]
-            for a,b in zip(path,path[1:]):
-                points.extend(road_points(a,b)[1:])
-            return tuple(points), length
-        if current in visited:
-            continue
-        visited.add(current)
-        for a, b in ROADS:
-            other = b if current == a else a if current == b else None
-            if other is not None and other not in visited:
-                points = road_points(current,other)
-                paths.append((length + sum(dist(a,b) for a,b in zip(points,points[1:])), (*path, other)))
-    raise ValueError('Место не связано с дорогами посёлка')
+    return game_map().path(origin,target)
 
 
 def travel_minutes(origin, target):
-    return round(route(origin, target)[1] / 2.3)
+    return round(route(origin, target)[1] / 4.6)
+
+
+def journey(move, minute):
+    return {'coordinate_space':'world','map_revision':game_map().revision,
+            'origin':move.origin,'path':route(move.origin,move.target)[0],
+            'travel_progress':min(1,max(0,(minute-move.began)/max(1,move.arrival-move.began)))}
 
 
 @dataclass(frozen=True)
@@ -251,6 +226,10 @@ class World:
     shop_food: int = 0
     pantry: int = 0
     meals: int = 0
+    seeds: int = 3
+    hunger: int = 0
+    watered_day: int = 0
+    projects: dict = field(default_factory=dict)
 
     def _set_task(self, task, target, duration):
         origin = self.move.target
@@ -318,9 +297,12 @@ class World:
         if self.move.task == 'gather':
             self.wood += 1
         elif self.move.task == 'plant':
-            self.garden = 2
+            if self.seeds:
+                self.seeds -= 1
+                self.garden = 2
+                self.watered_day = calendar(self.minute)['day']
         elif self.move.task == 'tend':
-            self.garden = min(self.garden + 3, 18)
+            self.watered_day = calendar(self.minute)['day']
         elif self.move.task == 'harvest':
             self.garden = 0
             self.harvests += 1
@@ -337,6 +319,20 @@ class World:
             self.wood -= 2
             self.coins -= 6
             self.pier_repairs += 1
+        elif self.move.task == 'supplies' and self.coins >= 2:
+            self.coins -= 2
+            self.seeds += 3
+        elif self.move.task == 'meal':
+            if self.coins >= 2:
+                self.coins -= 2
+                self.hunger = 0
+        elif self.move.task in ('breakfast','sleep'):
+            self.hunger = 0
+        elif self.move.task == 'restore' and self.wood >= 3 and self.coins >= 8:
+            self.wood -= 3
+            self.coins -= 8
+            place = self.move.target
+            self.projects[place] = min(3,self.projects.get(place,0)+1)
 
     def _routine(self):
         current = calendar(self.minute)
@@ -351,16 +347,26 @@ class World:
         weather = sky_weather(self.seed, self.minute, current['season'])
         rng = random.Random(self.seed + self.minute * 3)
         garden_task = 'plant' if not self.garden else 'harvest' if self.garden >= 12 else 'tend'
-        garden_score = 2.1 if garden_task in ('plant','harvest') else 1.6
+        garden_score = 2.1 if garden_task in ('plant','harvest') else .7
+        if garden_task=='plant' and not self.seeds:
+            garden_score = -10
+        if garden_task=='tend' and self.watered_day != current['day']:
+            garden_score += 1.7
         if weather != 'clear' or current['season'] == 3:
             garden_score -= 1.3
+        if current['season']==3 and self.projects.get('garden',0)<3:
+            garden_score = -10
+        project = next((place for place in ('mill','orchard','garden') if self.projects.get(place,0)<3), None)
         options = [('gather', 'grove', 60, 1.7 if self.wood < 2 else .3),
                    ('fish', 'pier', 76, 1.2 if weather == 'clear' else .2),
                    (garden_task, 'garden', 65, garden_score),
                    ('visit', HUB, 56, 1.1 + self.friends * .018),
                    ('walk', rng.choice(tuple(HOMES)), 45, .8),
                    ('build', home, 84, 2.3 if self.wood >= 2 and self.coins >= 3 and self.improvements < 6 else -10),
-                   ('repair', 'pier', 90, 2.2 if self.wood >= 2 and self.coins >= 6 and self.pier_repairs < 3 else -10)]
+                   ('repair', 'pier', 90, 2.2 if self.wood >= 2 and self.coins >= 6 and self.pier_repairs < 3 else -10),
+                   ('supplies','market',35,4 if not self.seeds and self.coins>=2 else -10),
+                   ('meal','inn',55,4 if self.hunger>=6 and self.coins>=2 else -10),
+                   ('restore',project or 'mill',100,3.1 if project and self.wood>=3 and self.coins>=8 else -10)]
         candidates = [(*item, None) for item in options] + self._visit_options()
         task, place, duration, _, self.appointment = max(candidates, key=lambda item: item[3] + rng.random()*2 - 2*(item[0] == self.move.task))
         self._set_task(task, place, duration)
@@ -410,6 +416,13 @@ class World:
     def advance(self):
         previous = self.minute
         self.minute += MINUTES_PER_SECOND
+        if self.minute//120 != previous//120:
+            self.hunger = min(10,self.hunger+1)
+            now = calendar(self.minute)
+            wet = self.watered_day == now['day'] or sky_weather(self.seed,self.minute,now['season'])=='rain'
+            growing = now['season'] != 3 or self.projects.get('garden',0)>=3
+            if 0 < self.garden < 18 and wet and growing:
+                self.garden += 1
         self._advance_town(previous)
         if self.move.task == 'visit' and self.appointment and self.minute >= self.move.arrival:
             self._start_conversation()
@@ -444,7 +457,8 @@ class World:
             if self.conversation and key == self.conversation['resident']:
                 x,y = position[0]+10, position[1]
             residents.append({'id': key, 'position': (x,y), 'look': person.look, 'color': person.color,
-                              'moving': walking, 'facing': stop.facing(minute), 'task': stop.task, 'place': stop.target})
+                              'moving': walking, 'facing': stop.facing(minute), 'task': stop.task, 'place': stop.target,
+                              **journey(stop,minute)})
         chat = None
         if self.conversation:
             speaker = 0 if minute-self.conversation['minute'] < 16 else 1
@@ -458,13 +472,14 @@ class World:
                     speaker = int(minute % 156 >= 14)
                     chat = {'resident': pair[1-speaker]['id'], 'speaker': pair[speaker]['id'], 'text': lines[speaker]}
                     break
-        return current | {'profile': dict(self.profile), 'minute': minute, 'position': position,
+        return current | journey(self.move,minute) | {'profile': dict(self.profile), 'minute': minute, 'position': position,
                           'moving': moving, 'facing': 'right' if self.conversation else self.move.facing(minute),
                           'task': self.move.task, 'target': self.move.target, 'wood': self.wood,
                           'garden': self.garden, 'friends': self.friends, 'improvements': self.improvements,
                           'weather': sky_weather(self.seed, minute, current['season']),
                           'active': self.active['kind'] if self.active else None, 'lantern': self.lantern_restored,
-                          'residents': residents, 'dialogue': chat, 'pier_repairs': self.pier_repairs}
+                          'residents': residents, 'dialogue': chat, 'pier_repairs': self.pier_repairs,
+                          'projects':dict(self.projects),'map_version':2}
 
 
 class Village:
@@ -488,13 +503,15 @@ class Village:
                         world.minute, world.seed, world.wood, world.garden, world.harvests, world.friends, world.improvements,
                         world.next_story, world.story_no, world.chain_at, world.move.began, world.move.arrival,
                         world.move.ends, world.produce, world.fish, world.coins, world.pier_repairs,
-                        world.shop_food, world.pantry, world.meals))
+                        world.shop_food, world.pantry, world.meals,world.seeds,world.hunger,world.watered_day))
                     or world.minute < 360 or not 0 <= world.improvements <= 6 or not 0 <= world.pier_repairs <= 3
                     or world.shop_food > 30 or world.pantry > 20 or world.meals > 20
                     or not isinstance(world.journal, list) or len(world.journal) > 24
                     or not isinstance(world.relationships, dict) or not isinstance(world.recent_chats, list)
                     or len(world.recent_chats) > 12 or world.appointment not in (*PEOPLE, None)):
                 raise ValueError('Некорректное сохранение посёлка')
+            if not isinstance(world.projects,dict) or any(key not in ('mill','orchard','garden') or type(value) is not int or not 0<=value<=3 for key,value in world.projects.items()):
+                raise ValueError('Некорректный проект посёлка')
             for entry in world.journal:
                 self._entry(entry)
             if world.active and (world.active['kind'] not in STORIES or world.active['id'] != world.story_no):
@@ -581,10 +598,14 @@ class Village:
                                'place': PLACE_NAMES[move.target], 'affinity': world.relationships.get(key, 0)})
             recent = world.conversation or next(iter(world.recent_chats), None)
             chat = dict(recent, name=PEOPLE[recent['resident']].name) if recent else None
+            projects = [{'place':place,'title':title,'progress':world.projects.get(place,0)}
+                        for place,title in [('mill','Восстановить мельницу'),('orchard','Возродить фруктовый сад'),('garden','Построить теплицу')]]
+            goal = next((project for project in projects if project['progress']<3),None)
             return current | {'key': str(world.seed), 'profile': dict(world.profile), 'season_name': SEASONS[current['season']],
                               'home_name': HOMES[world.profile['home']], 'task': TASKS[world.move.task],
                               'harvests': world.harvests, 'coins': world.coins, 'people': people, 'conversation': chat,
                               'shop_food': world.shop_food, 'meals': world.meals,
+                              'projects':projects,'goal':goal,'seeds':world.seeds,'wood':world.wood,
                               'stage': 'Старожил' if current['day'] >= 15 else 'Обжился' if world.improvements else 'Новосёл',
                               'active': world.active['id'] if world.active else None, 'latest': latest}
 

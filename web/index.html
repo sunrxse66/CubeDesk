@@ -192,11 +192,22 @@
               <p id="village-home-name"></p>
               <div class="village-calendar"><strong id="village-hero"></strong><span id="village-calendar"></span></div>
               <p id="village-task"></p>
+              <label class="village-field village-stream-mode" for="village-detail">Показ на кубике<select id="village-detail"><option value="smooth">Плавно · 80×80</option><option value="balanced">Баланс · 120×120</option><option value="sharp">Чётко · 240×240</option></select></label>
               <div class="village-actions"><button id="village-show" class="primary" type="button" disabled>Показать на кубике ↗</button><button id="village-edit" class="secondary" type="button">Изменить героя</button></div>
               <p id="village-display-hint" class="village-display-hint" hidden>Подключите кубик с PCStream, чтобы показать посёлок.</p>
             </div>
           </div>
         </div>
+        <details id="village-map" class="village-map card">
+          <summary><span>Общая карта посёлка</span><span class="village-map-hint">Открыть обзор</span></summary>
+          <p>Светлая точка — герой. Мятная рамка — участок, который сейчас виден на кубике.</p>
+          <label class="village-map-collisions"><input id="village-map-bounds" type="checkbox"> Границы объектов и путь героя</label>
+          <div class="village-map-paper"><img id="village-map-image" width="1280" height="1024" alt="Общая карта посёлка с фермой, рекой, жилой улицей, лесом и гаванью"></div>
+        </details>
+        <section id="village-goals" class="village-goals card" hidden>
+          <div><span class="village-goal-kicker">СЛЕДУЮЩАЯ ГЛАВА</span><h3 id="village-goal-title"></h3><p id="village-goal-copy"></p></div>
+          <div id="village-projects"></div>
+        </section>
         <div id="village-alert" class="village-alert card" role="status" hidden><span>СОБЫТИЕ ИДЁТ</span><strong id="village-alert-title"></strong><p id="village-alert-text"></p></div>
         <details id="village-neighbors" class="village-neighbors card" hidden>
           <summary>Жители посёлка</summary>

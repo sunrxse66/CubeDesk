@@ -5,6 +5,45 @@ const villageImage = $('#village-preview');
 let villageEditing = false, villageSaving = false, villagePreviewBusy = false;
 let villageJournalKey = '', villageJournalBusy = false, villageNoticeKey = '';
 let villagePeopleKey = '';
+let villageDisplayBusy = false;
+
+$('#village-detail').addEventListener('change', async event => {
+  if (villageDisplayBusy) return;
+  villageDisplayBusy = true;
+  $('#village-detail').disabled = true;
+  try { await api('/api/village/display', {detail:event.target.value}); }
+  catch (error) { toast(error.message,true); }
+  finally { villageDisplayBusy = false; await refreshState(); }
+});
+let villageMapBusy = false, villageMapPoster = '';
+
+function refreshVillageMap() {
+  if (serverGone || villageMapBusy || !$('#village-map').open || document.hidden || !widgetTabVisible('village')) return;
+  const query = new URLSearchParams({view: 'map'});
+  if ($('#village-map-bounds').checked) query.set('bounds','1');
+  if (villageEditing || !state?.village) {
+    const {home, look, color} = villageProfileInput();
+    query.set('home', home);
+    query.set('look', look);
+    query.set('color', color);
+    if (villageMapPoster === query.toString()) return;
+    villageMapPoster = query.toString();
+  } else {
+    villageMapPoster = '';
+    query.set('t', Date.now());
+  }
+  villageMapBusy = true;
+  const image = $('#village-map-image');
+  image.onload = () => { villageMapBusy = false; };
+  image.onerror = () => { villageMapBusy = false; villageMapPoster = ''; };
+  image.src = '/api/village/preview?' + query;
+}
+$('#village-map').addEventListener('toggle', () => {
+  $('.village-map-hint').textContent = $('#village-map').open ? 'Свернуть обзор' : 'Открыть обзор';
+  refreshVillageMap();
+});
+$('#village-map-bounds').addEventListener('change', () => { villageMapPoster=''; refreshVillageMap(); });
+setInterval(refreshVillageMap, 1500);
 
 function villageCanShow() {
   const job = state?.job;
@@ -23,6 +62,7 @@ function villageProfileInput() {
 function showVillagePoster() {
   const {home, look, color} = villageProfileInput();
   villageImage.src = '/api/village/preview?' + new URLSearchParams({home, look, color});
+  refreshVillageMap();
 }
 
 function villagePreviewLoop() {
@@ -82,12 +122,29 @@ function renderVillageControls() {
   $('#village-resident').hidden = !village || villageEditing;
   $('#village-journal').hidden = !village;
   $('#village-neighbors').hidden = !village;
+  $('#village-goals').hidden = !village;
   $('#village-alert').hidden = !active;
   $('#village-save').disabled = villageSaving;
   $('#village-cancel').hidden = !villageEditing;
   $('#village-cancel').disabled = villageSaving;
   $('#village-save').textContent = villageEditing ? 'Сохранить героя' : 'Поселиться';
   if (!village) return;
+  $('#village-detail').disabled = villageDisplayBusy;
+  if (!villageDisplayBusy) $('#village-detail').value = state.settings.village_detail || 'smooth';
+  const goal = village.goal;
+  $('#village-goal-title').textContent = goal?.title || 'Посёлок обустроен';
+  $('#village-goal-copy').textContent = goal ? `Герой собирает материалы и зарабатывает на восстановление. Доски: ${village.wood || 0} · Семена: ${village.seeds || 0}` : 'Герой продолжает жить, выращивать растения и встречаться с соседями.';
+  $('#village-projects').replaceChildren(...(village.projects || []).map(project => {
+    const row = document.createElement('div');
+    const title = document.createElement('span');
+    title.textContent = project.title;
+    const progress = document.createElement('progress');
+    progress.max = 3;
+    progress.value = project.progress;
+    progress.setAttribute('aria-label', `${project.title}, ${project.progress} из 3 этапов`);
+    row.append(title,progress);
+    return row;
+  }));
   $('#village-home-name').textContent = village.home_name;
   $('#village-hero').textContent = village.profile.name;
   $('#village-calendar').textContent = `${village.season_name} · День ${village.day} · ${village.time}`;

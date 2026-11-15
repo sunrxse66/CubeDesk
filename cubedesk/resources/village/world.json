@@ -1,0 +1,2790 @@
+{
+  "schema": 2,
+  "revision": "modular-bay-1",
+  "size": [
+    640,
+    512
+  ],
+  "tile_size": 16,
+  "legend": {
+    "W": "sea",
+    "R": "river or pond",
+    "G": "grass",
+    "S": "sand",
+    "P": "path",
+    "C": "plaza",
+    "F": "fields",
+    "B": "bridge",
+    "D": "pier"
+  },
+  "tiles": [
+    "WWWWWWWWWWWWWWWWWWRRWWWWWWWWWWWWWWWWWWWW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGGGGRRGGGGGGGGGGGGGPGGGGGGW",
+    "WGGGGGGGPGGGGGPGBBBBBPPGGGGGPPPPPGGGGGGW",
+    "WGGGGGGGPPPPPPPPPRRGGGGPPPPPPGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGPGGRRGGGGGGPGGPGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGPGGRRGGGGGGPGGPGGGGGGGGGGW",
+    "WGGGGGGGGGGGGGPGGGRRGGGGGPGGPGGGGGGGGGGW",
+    "WGGGGGGGGGPPPPPGGGRRGGGGCCCCPPPPPPPPPGGW",
+    "WGGGGGGGGGPGGGPGGGRRGGGGCCCCGGGGPGGGGGGW",
+    "WGGGGGGGGGGGGGPGGGRRGGGGCCCCGGGGPGGGGGGW",
+    "WGGGGGPPPPPPPPPGGGRRGGGGCCCCGGGGPGGGGGGW",
+    "WGGGGGGGGGGFFFFGGGRRGGGGGPGGGGGGPPPGGGGW",
+    "WGGGGGGGGGGFFFFPBBBBBBPPPPGGGGGGGGPGGGGW",
+    "WGGGGGGGGGGFFFFPPGGRRGGGGPGGGGGGGGRRGGGW",
+    "WSSSGGGGGGGGGGGGPGGRRGGGGPPPPGGGGGRRSSSW",
+    "WSSSGGGGGGGGGGGGPGGRRGGGGPGGPGSSSSSPSSSW",
+    "WWWWGGGGGGGGGGGGPGGRRGGGGPGGPGSSSSSWWWWW",
+    "WWWWGGGGGGGGGGGGPSSRRSSSSSPPPSWWWWWWWWWW",
+    "WWWWSSSSSSPPPPPPPSSRRSSSSSPSSSWWWWWWWWWW",
+    "WWWWSSSSSSSSSSPSSWWRRWWWWWDDWWWWWWWWWWWW",
+    "WWWWWWWWWWWWSSPSSWWRRWWWWWDDWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWDDWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWDDWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "points": {
+    "lighthouse": [
+      128,
+      148
+    ],
+    "coast": [
+      160,
+      408
+    ],
+    "forest": [
+      520,
+      128
+    ],
+    "square": [
+      408,
+      264
+    ],
+    "pier": [
+      424,
+      472
+    ],
+    "grove": [
+      552,
+      320
+    ],
+    "garden": [
+      224,
+      332
+    ],
+    "market": [
+      408,
+      336
+    ],
+    "workshop": [
+      520,
+      252
+    ],
+    "inn": [
+      400,
+      168
+    ],
+    "west_lane": [
+      224,
+      152
+    ],
+    "east_lane": [
+      584,
+      224
+    ],
+    "mill": [
+      96,
+      280
+    ],
+    "orchard": [
+      160,
+      248
+    ],
+    "bridge": [
+      304,
+      312
+    ],
+    "beach": [
+      224,
+      440
+    ],
+    "pond": [
+      568,
+      364
+    ]
+  },
+  "objects": [
+    {
+      "id": "lighthouse",
+      "name": "Дом у маяка",
+      "kind": "building",
+      "asset": "house-yellow",
+      "bounds": [
+        101,
+        66,
+        155,
+        140
+      ],
+      "solid": [
+        104,
+        116,
+        152,
+        137
+      ]
+    },
+    {
+      "id": "beacon",
+      "name": "Маяк",
+      "kind": "tower",
+      "asset": "tower",
+      "bounds": [
+        40,
+        53,
+        89,
+        132
+      ],
+      "solid": [
+        43,
+        107,
+        86,
+        129
+      ]
+    },
+    {
+      "id": "coast",
+      "name": "Прибрежный дом",
+      "kind": "building",
+      "asset": "house-blue",
+      "bounds": [
+        133,
+        326,
+        187,
+        400
+      ],
+      "solid": [
+        136,
+        376,
+        184,
+        397
+      ]
+    },
+    {
+      "id": "forest",
+      "name": "Лесной дом",
+      "kind": "building",
+      "asset": "house-red",
+      "bounds": [
+        493,
+        46,
+        547,
+        120
+      ],
+      "solid": [
+        496,
+        96,
+        544,
+        117
+      ]
+    },
+    {
+      "id": "west_lane",
+      "name": "Дом Милы",
+      "kind": "building",
+      "asset": "house-purple",
+      "bounds": [
+        197,
+        70,
+        251,
+        144
+      ],
+      "solid": [
+        200,
+        120,
+        248,
+        141
+      ]
+    },
+    {
+      "id": "east_lane",
+      "name": "Дом у лесной тропы",
+      "kind": "building",
+      "asset": "house-yellow",
+      "bounds": [
+        557,
+        142,
+        611,
+        216
+      ],
+      "solid": [
+        560,
+        192,
+        608,
+        213
+      ]
+    },
+    {
+      "id": "inn",
+      "name": "Трактир у площади",
+      "kind": "building",
+      "asset": "inn",
+      "bounds": [
+        338,
+        74,
+        462,
+        160
+      ],
+      "solid": [
+        341,
+        135,
+        459,
+        157
+      ]
+    },
+    {
+      "id": "workshop",
+      "name": "Мастерская Ники",
+      "kind": "building",
+      "asset": "workshop",
+      "bounds": [
+        495,
+        180,
+        545,
+        244
+      ],
+      "solid": [
+        498,
+        223,
+        542,
+        241
+      ]
+    },
+    {
+      "id": "mill",
+      "name": "Старая мельница",
+      "kind": "building",
+      "asset": "tower",
+      "bounds": [
+        72,
+        193,
+        121,
+        272
+      ],
+      "solid": [
+        75,
+        247,
+        118,
+        269
+      ]
+    },
+    {
+      "id": "fountain",
+      "name": "Фонтан",
+      "kind": "prop",
+      "asset": "fountain",
+      "bounds": [
+        391,
+        223,
+        425,
+        248
+      ],
+      "solid": [
+        393,
+        238,
+        422,
+        246
+      ]
+    },
+    {
+      "id": "market-a",
+      "name": "Лавка Милы",
+      "kind": "prop",
+      "asset": "stall-mint",
+      "bounds": [
+        372,
+        296,
+        412,
+        328
+      ],
+      "solid": [
+        374,
+        318,
+        409,
+        326
+      ]
+    },
+    {
+      "id": "market-b",
+      "name": "Цветочная лавка",
+      "kind": "prop",
+      "asset": "stall-rose",
+      "bounds": [
+        420,
+        296,
+        460,
+        328
+      ],
+      "solid": [
+        422,
+        318,
+        457,
+        326
+      ]
+    },
+    {
+      "id": "square-bench",
+      "name": "Скамейка",
+      "kind": "prop",
+      "asset": "bench",
+      "bounds": [
+        440,
+        254,
+        465,
+        271
+      ],
+      "solid": [
+        442,
+        263,
+        462,
+        269
+      ]
+    },
+    {
+      "id": "west-bench",
+      "name": "Скамейка у маяка",
+      "kind": "prop",
+      "asset": "bench",
+      "bounds": [
+        124,
+        170,
+        149,
+        187
+      ],
+      "solid": [
+        126,
+        179,
+        146,
+        185
+      ]
+    },
+    {
+      "id": "lamp-0",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        358,
+        234,
+        367,
+        264
+      ],
+      "solid": [
+        360,
+        254,
+        364,
+        262
+      ]
+    },
+    {
+      "id": "lamp-1",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        452,
+        234,
+        461,
+        264
+      ],
+      "solid": [
+        454,
+        254,
+        458,
+        262
+      ]
+    },
+    {
+      "id": "lamp-2",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        366,
+        314,
+        375,
+        344
+      ],
+      "solid": [
+        368,
+        334,
+        372,
+        342
+      ]
+    },
+    {
+      "id": "lamp-3",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        446,
+        314,
+        455,
+        344
+      ],
+      "solid": [
+        448,
+        334,
+        452,
+        342
+      ]
+    },
+    {
+      "id": "lamp-4",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        128,
+        389,
+        137,
+        419
+      ],
+      "solid": [
+        130,
+        409,
+        134,
+        417
+      ]
+    },
+    {
+      "id": "lamp-5",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        532,
+        107,
+        541,
+        137
+      ],
+      "solid": [
+        534,
+        127,
+        538,
+        135
+      ]
+    },
+    {
+      "id": "lamp-6",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        238,
+        144,
+        247,
+        174
+      ],
+      "solid": [
+        240,
+        164,
+        244,
+        172
+      ]
+    },
+    {
+      "id": "lamp-7",
+      "name": "Фонарь",
+      "kind": "prop",
+      "asset": "lamp",
+      "bounds": [
+        122,
+        122,
+        131,
+        152
+      ],
+      "solid": [
+        124,
+        142,
+        128,
+        150
+      ]
+    },
+    {
+      "id": "flowers-0",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        101,
+        134,
+        114,
+        146
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-1",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        143,
+        134,
+        156,
+        146
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-2",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        494,
+        114,
+        507,
+        126
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-3",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        534,
+        114,
+        547,
+        126
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-4",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        199,
+        138,
+        212,
+        150
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-5",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        237,
+        138,
+        250,
+        150
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-6",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        131,
+        392,
+        144,
+        404
+      ],
+      "solid": null
+    },
+    {
+      "id": "flowers-7",
+      "name": "Цветы у дома",
+      "kind": "prop",
+      "asset": "planter",
+      "bounds": [
+        176,
+        392,
+        189,
+        404
+      ],
+      "solid": null
+    },
+    {
+      "id": "sign-0",
+      "name": "Указатель",
+      "kind": "prop",
+      "asset": "sign",
+      "bounds": [
+        236,
+        322,
+        253,
+        342
+      ],
+      "solid": [
+        238,
+        332,
+        250,
+        340
+      ]
+    },
+    {
+      "id": "sign-1",
+      "name": "Указатель",
+      "kind": "prop",
+      "asset": "sign",
+      "bounds": [
+        272,
+        148,
+        289,
+        168
+      ],
+      "solid": [
+        274,
+        158,
+        286,
+        166
+      ]
+    },
+    {
+      "id": "sign-2",
+      "name": "Указатель",
+      "kind": "prop",
+      "asset": "sign",
+      "bounds": [
+        464,
+        324,
+        481,
+        344
+      ],
+      "solid": [
+        466,
+        334,
+        478,
+        342
+      ]
+    },
+    {
+      "id": "sign-3",
+      "name": "Указатель",
+      "kind": "prop",
+      "asset": "sign",
+      "bounds": [
+        552,
+        224,
+        569,
+        244
+      ],
+      "solid": [
+        554,
+        234,
+        566,
+        242
+      ]
+    },
+    {
+      "id": "lighthouse-mail",
+      "name": "Почтовый ящик",
+      "kind": "prop",
+      "asset": "mailbox",
+      "bounds": [
+        144,
+        141,
+        160,
+        164
+      ],
+      "solid": [
+        146,
+        154,
+        157,
+        162
+      ]
+    },
+    {
+      "id": "lighthouse-fence--1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        72,
+        158,
+        104,
+        173
+      ],
+      "solid": [
+        74,
+        166,
+        101,
+        171
+      ]
+    },
+    {
+      "id": "lighthouse-bed--1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        90,
+        162,
+        114,
+        176
+      ],
+      "solid": null
+    },
+    {
+      "id": "lighthouse-fence-1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        152,
+        158,
+        184,
+        173
+      ],
+      "solid": [
+        154,
+        166,
+        181,
+        171
+      ]
+    },
+    {
+      "id": "lighthouse-bed-1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        142,
+        162,
+        166,
+        176
+      ],
+      "solid": null
+    },
+    {
+      "id": "coast-mail",
+      "name": "Почтовый ящик",
+      "kind": "prop",
+      "asset": "mailbox",
+      "bounds": [
+        176,
+        401,
+        192,
+        424
+      ],
+      "solid": [
+        178,
+        414,
+        189,
+        422
+      ]
+    },
+    {
+      "id": "coast-fence--1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        104,
+        418,
+        136,
+        433
+      ],
+      "solid": [
+        106,
+        426,
+        133,
+        431
+      ]
+    },
+    {
+      "id": "coast-bed--1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        122,
+        422,
+        146,
+        436
+      ],
+      "solid": null
+    },
+    {
+      "id": "coast-fence-1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        184,
+        418,
+        216,
+        433
+      ],
+      "solid": [
+        186,
+        426,
+        213,
+        431
+      ]
+    },
+    {
+      "id": "coast-bed-1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        174,
+        422,
+        198,
+        436
+      ],
+      "solid": null
+    },
+    {
+      "id": "forest-mail",
+      "name": "Почтовый ящик",
+      "kind": "prop",
+      "asset": "mailbox",
+      "bounds": [
+        536,
+        121,
+        552,
+        144
+      ],
+      "solid": [
+        538,
+        134,
+        549,
+        142
+      ]
+    },
+    {
+      "id": "forest-fence--1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        464,
+        138,
+        496,
+        153
+      ],
+      "solid": [
+        466,
+        146,
+        493,
+        151
+      ]
+    },
+    {
+      "id": "forest-bed--1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        482,
+        142,
+        506,
+        156
+      ],
+      "solid": null
+    },
+    {
+      "id": "forest-fence-1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        544,
+        138,
+        576,
+        153
+      ],
+      "solid": [
+        546,
+        146,
+        573,
+        151
+      ]
+    },
+    {
+      "id": "forest-bed-1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        534,
+        142,
+        558,
+        156
+      ],
+      "solid": null
+    },
+    {
+      "id": "west_lane-mail",
+      "name": "Почтовый ящик",
+      "kind": "prop",
+      "asset": "mailbox",
+      "bounds": [
+        240,
+        145,
+        256,
+        168
+      ],
+      "solid": [
+        242,
+        158,
+        253,
+        166
+      ]
+    },
+    {
+      "id": "west_lane-fence--1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        168,
+        162,
+        200,
+        177
+      ],
+      "solid": [
+        170,
+        170,
+        197,
+        175
+      ]
+    },
+    {
+      "id": "west_lane-bed--1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        186,
+        166,
+        210,
+        180
+      ],
+      "solid": null
+    },
+    {
+      "id": "west_lane-fence-1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        248,
+        162,
+        280,
+        177
+      ],
+      "solid": [
+        250,
+        170,
+        277,
+        175
+      ]
+    },
+    {
+      "id": "west_lane-bed-1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        238,
+        166,
+        262,
+        180
+      ],
+      "solid": null
+    },
+    {
+      "id": "east_lane-mail",
+      "name": "Почтовый ящик",
+      "kind": "prop",
+      "asset": "mailbox",
+      "bounds": [
+        600,
+        217,
+        616,
+        240
+      ],
+      "solid": [
+        602,
+        230,
+        613,
+        238
+      ]
+    },
+    {
+      "id": "east_lane-fence--1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        528,
+        234,
+        560,
+        249
+      ],
+      "solid": [
+        530,
+        242,
+        557,
+        247
+      ]
+    },
+    {
+      "id": "east_lane-bed--1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        546,
+        238,
+        570,
+        252
+      ],
+      "solid": null
+    },
+    {
+      "id": "east_lane-fence-1",
+      "name": "Ограда палисадника",
+      "kind": "prop",
+      "asset": "fence",
+      "bounds": [
+        608,
+        234,
+        640,
+        249
+      ],
+      "solid": [
+        610,
+        242,
+        637,
+        247
+      ]
+    },
+    {
+      "id": "east_lane-bed-1",
+      "name": "Цветник",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        598,
+        238,
+        622,
+        252
+      ],
+      "solid": null
+    },
+    {
+      "id": "yard-0",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "woodpile",
+      "bounds": [
+        538,
+        238,
+        562,
+        254
+      ],
+      "solid": [
+        540,
+        246,
+        559,
+        252
+      ]
+    },
+    {
+      "id": "yard-1",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "crate",
+      "bounds": [
+        486,
+        243,
+        503,
+        258
+      ],
+      "solid": [
+        488,
+        251,
+        500,
+        256
+      ]
+    },
+    {
+      "id": "yard-2",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "barrel",
+      "bounds": [
+        547,
+        216,
+        563,
+        237
+      ],
+      "solid": [
+        549,
+        227,
+        560,
+        235
+      ]
+    },
+    {
+      "id": "yard-3",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "crate",
+      "bounds": [
+        360,
+        317,
+        377,
+        332
+      ],
+      "solid": [
+        362,
+        325,
+        374,
+        330
+      ]
+    },
+    {
+      "id": "yard-4",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "crate",
+      "bounds": [
+        355,
+        331,
+        372,
+        346
+      ],
+      "solid": [
+        357,
+        339,
+        369,
+        344
+      ]
+    },
+    {
+      "id": "yard-5",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "barrel",
+      "bounds": [
+        453,
+        314,
+        469,
+        335
+      ],
+      "solid": [
+        455,
+        325,
+        466,
+        333
+      ]
+    },
+    {
+      "id": "yard-6",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "barrel",
+      "bounds": [
+        332,
+        151,
+        348,
+        172
+      ],
+      "solid": [
+        334,
+        162,
+        345,
+        170
+      ]
+    },
+    {
+      "id": "yard-7",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "woodpile",
+      "bounds": [
+        434,
+        159,
+        458,
+        175
+      ],
+      "solid": [
+        436,
+        167,
+        455,
+        173
+      ]
+    },
+    {
+      "id": "yard-8",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "well",
+      "bounds": [
+        236,
+        256,
+        264,
+        291
+      ],
+      "solid": [
+        238,
+        281,
+        261,
+        289
+      ]
+    },
+    {
+      "id": "yard-9",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "crate",
+      "bounds": [
+        244,
+        329,
+        261,
+        344
+      ],
+      "solid": [
+        246,
+        337,
+        258,
+        342
+      ]
+    },
+    {
+      "id": "yard-10",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "barrel",
+      "bounds": [
+        67,
+        267,
+        83,
+        288
+      ],
+      "solid": [
+        69,
+        278,
+        80,
+        286
+      ]
+    },
+    {
+      "id": "yard-11",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "woodpile",
+      "bounds": [
+        104,
+        271,
+        128,
+        287
+      ],
+      "solid": [
+        106,
+        279,
+        125,
+        285
+      ]
+    },
+    {
+      "id": "yard-12",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "barrel",
+      "bounds": [
+        397,
+        410,
+        413,
+        431
+      ],
+      "solid": [
+        399,
+        421,
+        410,
+        429
+      ]
+    },
+    {
+      "id": "yard-13",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "crate",
+      "bounds": [
+        436,
+        423,
+        453,
+        438
+      ],
+      "solid": [
+        438,
+        431,
+        450,
+        436
+      ]
+    },
+    {
+      "id": "yard-14",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "fishing-gear",
+      "bounds": [
+        433,
+        435,
+        458,
+        458
+      ],
+      "solid": null
+    },
+    {
+      "id": "yard-15",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "rowboat",
+      "bounds": [
+        443,
+        447,
+        484,
+        470
+      ],
+      "solid": null
+    },
+    {
+      "id": "yard-16",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "rowboat",
+      "bounds": [
+        448,
+        424,
+        489,
+        447
+      ],
+      "solid": null
+    },
+    {
+      "id": "yard-17",
+      "name": "Деталь посёлка",
+      "kind": "prop",
+      "asset": "fishing-gear",
+      "bounds": [
+        235,
+        420,
+        260,
+        443
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-0",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        340,
+        252,
+        364,
+        266
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-1",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        449,
+        271,
+        473,
+        285
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-2",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        360,
+        290,
+        384,
+        304
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-3",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        438,
+        293,
+        462,
+        307
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-4",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        364,
+        336,
+        388,
+        350
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-5",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        248,
+        180,
+        272,
+        194
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-6",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        224,
+        203,
+        248,
+        217
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-7",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        468,
+        187,
+        492,
+        201
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-8",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        536,
+        267,
+        560,
+        281
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-9",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        534,
+        348,
+        558,
+        362
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-10",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        130,
+        286,
+        154,
+        300
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-11",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        179,
+        336,
+        203,
+        350
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-12",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        170,
+        405,
+        194,
+        419
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-13",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        194,
+        416,
+        218,
+        430
+      ],
+      "solid": null
+    },
+    {
+      "id": "border-flower-14",
+      "name": "Цветы у тропинки",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        477,
+        154,
+        501,
+        168
+      ],
+      "solid": null
+    },
+    {
+      "id": "tree-92",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        149,
+        2,
+        200,
+        82
+      ],
+      "solid": [
+        169,
+        74,
+        179,
+        81
+      ]
+    },
+    {
+      "id": "tree-93",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        245,
+        10,
+        296,
+        90
+      ],
+      "solid": [
+        265,
+        82,
+        275,
+        89
+      ]
+    },
+    {
+      "id": "tree-94",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        555,
+        6,
+        606,
+        86
+      ],
+      "solid": [
+        575,
+        78,
+        585,
+        85
+      ]
+    },
+    {
+      "id": "tree-95",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        -2,
+        46,
+        49,
+        126
+      ],
+      "solid": [
+        18,
+        118,
+        28,
+        125
+      ]
+    },
+    {
+      "id": "tree-96",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        150,
+        41,
+        201,
+        121
+      ],
+      "solid": [
+        170,
+        113,
+        180,
+        120
+      ]
+    },
+    {
+      "id": "tree-97",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        555,
+        41,
+        606,
+        121
+      ],
+      "solid": [
+        575,
+        113,
+        585,
+        120
+      ]
+    },
+    {
+      "id": "tree-98",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        -4,
+        81,
+        47,
+        161
+      ],
+      "solid": [
+        16,
+        153,
+        26,
+        160
+      ]
+    },
+    {
+      "id": "tree-99",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        -3,
+        130,
+        48,
+        210
+      ],
+      "solid": [
+        17,
+        202,
+        27,
+        209
+      ]
+    },
+    {
+      "id": "tree-100",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        280,
+        123,
+        331,
+        203
+      ],
+      "solid": [
+        300,
+        195,
+        310,
+        202
+      ]
+    },
+    {
+      "id": "tree-101",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        341,
+        133,
+        392,
+        213
+      ],
+      "solid": [
+        361,
+        205,
+        371,
+        212
+      ]
+    },
+    {
+      "id": "tree-102",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        4,
+        170,
+        55,
+        250
+      ],
+      "solid": [
+        24,
+        242,
+        34,
+        249
+      ]
+    },
+    {
+      "id": "tree-103",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        2,
+        211,
+        53,
+        291
+      ],
+      "solid": [
+        22,
+        283,
+        32,
+        290
+      ]
+    },
+    {
+      "id": "tree-104",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        560,
+        213,
+        611,
+        293
+      ],
+      "solid": [
+        580,
+        285,
+        590,
+        292
+      ]
+    },
+    {
+      "id": "tree-105",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        62,
+        265,
+        113,
+        345
+      ],
+      "solid": [
+        82,
+        337,
+        92,
+        344
+      ]
+    },
+    {
+      "id": "tree-106",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        274,
+        297,
+        325,
+        377
+      ],
+      "solid": [
+        294,
+        369,
+        304,
+        376
+      ]
+    },
+    {
+      "id": "tree-107",
+      "name": "Сосна",
+      "kind": "tree",
+      "asset": "tree",
+      "bounds": [
+        345,
+        299,
+        396,
+        379
+      ],
+      "solid": [
+        365,
+        371,
+        375,
+        378
+      ]
+    },
+    {
+      "id": "orchard-tree-0",
+      "name": "Плодовое дерево",
+      "kind": "tree",
+      "asset": "orchard-tree",
+      "bounds": [
+        98,
+        184,
+        142,
+        238
+      ],
+      "solid": [
+        115,
+        230,
+        125,
+        237
+      ]
+    },
+    {
+      "id": "orchard-tree-1",
+      "name": "Плодовое дерево",
+      "kind": "tree",
+      "asset": "orchard-tree",
+      "bounds": [
+        142,
+        174,
+        186,
+        228
+      ],
+      "solid": [
+        159,
+        220,
+        169,
+        227
+      ]
+    },
+    {
+      "id": "orchard-tree-2",
+      "name": "Плодовое дерево",
+      "kind": "tree",
+      "asset": "orchard-tree",
+      "bounds": [
+        122,
+        218,
+        166,
+        272
+      ],
+      "solid": [
+        139,
+        264,
+        149,
+        271
+      ]
+    },
+    {
+      "id": "decor-2",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        188,
+        346,
+        205,
+        359
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-6",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-02",
+      "bounds": [
+        127,
+        243,
+        143,
+        259
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-7",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-07",
+      "bounds": [
+        558,
+        106,
+        577,
+        119
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-8",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-04",
+      "bounds": [
+        371,
+        213,
+        383,
+        224
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-10",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        386,
+        32,
+        410,
+        55
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-11",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-08",
+      "bounds": [
+        461,
+        66,
+        486,
+        85
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-15",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-10",
+      "bounds": [
+        77,
+        172,
+        90,
+        186
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-19",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-04",
+      "bounds": [
+        174,
+        37,
+        186,
+        48
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-24",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        169,
+        50,
+        193,
+        73
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-26",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-10",
+      "bounds": [
+        331,
+        358,
+        344,
+        372
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-32",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-11",
+      "bounds": [
+        309,
+        103,
+        328,
+        124
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-33",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-08",
+      "bounds": [
+        25,
+        223,
+        50,
+        242
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-35",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-11",
+      "bounds": [
+        274,
+        347,
+        293,
+        368
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-38",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-11",
+      "bounds": [
+        158,
+        87,
+        177,
+        108
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-41",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        57,
+        311,
+        81,
+        334
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-47",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-08",
+      "bounds": [
+        18,
+        71,
+        43,
+        90
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-50",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        92,
+        292,
+        116,
+        315
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-51",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        263,
+        236,
+        280,
+        249
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-58",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-10",
+      "bounds": [
+        470,
+        79,
+        483,
+        93
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-60",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-07",
+      "bounds": [
+        269,
+        307,
+        288,
+        320
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-61",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-04",
+      "bounds": [
+        71,
+        357,
+        83,
+        368
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-62",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-10",
+      "bounds": [
+        256,
+        65,
+        269,
+        79
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-67",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-08",
+      "bounds": [
+        543,
+        48,
+        568,
+        67
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-71",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        319,
+        76,
+        343,
+        99
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-72",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        41,
+        143,
+        58,
+        156
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-79",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        107,
+        370,
+        124,
+        383
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-84",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-02",
+      "bounds": [
+        465,
+        229,
+        481,
+        245
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-88",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-01",
+      "bounds": [
+        128,
+        225,
+        138,
+        236
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-91",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-07",
+      "bounds": [
+        46,
+        128,
+        65,
+        141
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-93",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-01",
+      "bounds": [
+        432,
+        186,
+        442,
+        197
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-102",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-07",
+      "bounds": [
+        517,
+        311,
+        536,
+        324
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-106",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-11",
+      "bounds": [
+        294,
+        308,
+        313,
+        329
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-110",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-01",
+      "bounds": [
+        233,
+        354,
+        243,
+        365
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-111",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-04",
+      "bounds": [
+        164,
+        113,
+        176,
+        124
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-112",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        26,
+        268,
+        43,
+        281
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-113",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        181,
+        195,
+        205,
+        218
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-114",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-07",
+      "bounds": [
+        343,
+        191,
+        362,
+        204
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-119",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        596,
+        289,
+        620,
+        312
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-127",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-04",
+      "bounds": [
+        411,
+        205,
+        423,
+        216
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-130",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-12",
+      "bounds": [
+        274,
+        316,
+        298,
+        339
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-139",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-08",
+      "bounds": [
+        23,
+        187,
+        48,
+        206
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-148",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-05",
+      "bounds": [
+        209,
+        386,
+        226,
+        399
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-156",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-10",
+      "bounds": [
+        376,
+        182,
+        389,
+        196
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-157",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-11",
+      "bounds": [
+        69,
+        137,
+        88,
+        158
+      ],
+      "solid": null
+    },
+    {
+      "id": "decor-159",
+      "name": "Растение или камень",
+      "kind": "prop",
+      "asset": "deco-01",
+      "bounds": [
+        243,
+        43,
+        253,
+        54
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-8",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        160,
+        242,
+        184,
+        256
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-10",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        188,
+        255,
+        212,
+        269
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-14",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        209,
+        249,
+        233,
+        263
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-23",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        463,
+        91,
+        487,
+        105
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-25",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        198,
+        36,
+        222,
+        50
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-27",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        84,
+        378,
+        108,
+        392
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-28",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        205,
+        44,
+        229,
+        58
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-30",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        253,
+        214,
+        277,
+        228
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-32",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        465,
+        237,
+        489,
+        251
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-35",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        139,
+        299,
+        163,
+        313
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-39",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        197,
+        228,
+        221,
+        242
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-40",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        256,
+        195,
+        280,
+        209
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-45",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        114,
+        320,
+        138,
+        334
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-52",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        420,
+        274,
+        444,
+        288
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-84",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        246,
+        95,
+        270,
+        109
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-89",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        514,
+        331,
+        538,
+        345
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-112",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        482,
+        160,
+        506,
+        174
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-120",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        407,
+        184,
+        431,
+        198
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-124",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        453,
+        334,
+        477,
+        348
+      ],
+      "solid": null
+    },
+    {
+      "id": "meadow-125",
+      "name": "Луговые цветы",
+      "kind": "prop",
+      "asset": "flowerbed",
+      "bounds": [
+        167,
+        135,
+        191,
+        149
+      ],
+      "solid": null
+    }
+  ],
+  "garden": [
+    176,
+    288,
+    240,
+    336
+  ]
+}

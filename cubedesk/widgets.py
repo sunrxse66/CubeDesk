@@ -335,13 +335,18 @@ def play_widget(host, token, kind, stop, supplier, report=print, on_stats=None):
                     image = render_ambient(kind, started - scene_started) if ambient else render_village(snapshot)
                     edge = 120 if jpeg else 240
                     interval = 1 / ((16 if ambient else 14) if jpeg else 3)
+                    if kind == 'village' and jpeg:
+                        mode = snapshot.get('stream_detail','smooth')
+                        edge, fps = {'smooth':(80,20),'balanced':(120,12),'sharp':(240,8)}.get(mode,(80,20))
+                        interval = 1 / fps
                 elif kind == 'markets' and jpeg and len(snapshot['points']) > 1:
                     phase = (time.monotonic() % MARKET_ANIMATION_SECONDS) / MARKET_ANIMATION_SECONDS
                     image = render_market(snapshot, phase)
                     interval = 1 / 12
                 else:
                     image = render(kind, snapshot)
-                data=encode_jpeg(image,connection.max_jpeg,85,edge=edge)[0] if jpeg else rgb565(image)
+                quality = 78 if kind == 'village' else 85
+                data=encode_jpeg(image,connection.max_jpeg,quality,edge=edge)[0] if jpeg else rgb565(image)
                 if data!=last_data:
                     stats=connection.send_jpeg(data) if jpeg else connection.send(data)
                     last_data=data;sent+=1;last_ack=time.monotonic()
